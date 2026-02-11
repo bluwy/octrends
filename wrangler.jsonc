@@ -1,0 +1,16 @@
+{
+  // https://developers.cloudflare.com/workers/wrangler/configuration/
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "octrends",
+  "main": "worker/index.ts",
+  "compatibility_date": "2025-09-27",
+  "observability": {
+    "enabled": true,
+  },
+  "kv_namespaces": [
+    {
+      "binding": "OPEN_COLLECTIVE_TRANSACTIONS",
+      "id": "56471e1b160749c8a396d1f2f140a7d7",
+    },
+  ],
+}

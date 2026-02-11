@@ -1,0 +1,23 @@
+{
+  "name": "octrends",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "update-data": "node scripts/update-data.ts",
+    "worker:dev": "wrangler dev",
+    "worker:deploy": "wrangler deploy",
+    "worker:typegen": "wrangler types worker/worker-configuration.d.ts",
+    "graphql:codegen": "graphql-codegen --config graphql-codegen.ts",
+    "format": "prettier --write \"**/*.ts\""
+  },
+  "devDependencies": {
+    "@graphql-codegen/cli": "^6.1.1",
+    "@graphql-codegen/typescript-operations": "^5.0.7",
+    "@types/node": "^25.2.3",
+    "prettier": "^3.8.1",
+    "typescript": "^5.9.3",
+    "vite": "^8.0.0-beta.13",
+    "wrangler": "^4.64.0"
+  }
+}
