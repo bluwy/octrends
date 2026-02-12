@@ -1,4 +1,4 @@
-import type { CollectiveData } from '../types'
+import type { CollectiveData } from './types'
 
 export function getEarliestDate(data: CollectiveData[]): Date | null {
   let earliest: Date | null = null

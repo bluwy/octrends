@@ -1,7 +1,14 @@
 <script setup lang="ts">
-import { Scale } from '@unovis/ts'
-import { VisXYContainer, VisLine, VisAxis, VisTooltip, VisCrosshair } from '@unovis/vue'
-import type { CollectiveData } from '../../types'
+import { type BulletLegendItemInterface, Scale } from '@unovis/ts'
+import {
+  VisXYContainer,
+  VisLine,
+  VisAxis,
+  VisTooltip,
+  VisCrosshair,
+  VisBulletLegend,
+} from '@unovis/vue'
+import type { CollectiveData } from '../../utils/types'
 import { computed } from 'vue'
 import {
   chartCurrencyFormatter,
@@ -87,6 +94,12 @@ const data = computed<DataPoint[]>(() => {
   return computedData
 })
 
+const legends = computed<BulletLegendItemInterface[]>(() => {
+  return props.data.map((collective) => ({
+    name: collective.name,
+  }))
+})
+
 function tooltipTemplate(d: DataPoint) {
   return `${chartDailyDateFormatter.format(d.x)}: ${d.y
     .filter(Boolean)
@@ -97,6 +110,8 @@ function tooltipTemplate(d: DataPoint) {
 </script>
 
 <template>
+  <h3 class="text-xl font-400 m-0">Balance over time</h3>
+  <VisBulletLegend class="text-center mb-2" :items="legends" />
   <VisXYContainer :data="data" :xScale="Scale.scaleTime()">
     <VisLine
       :data="data"

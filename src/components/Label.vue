@@ -14,7 +14,6 @@ const emit = defineEmits(['close'])
     >
       <!-- https://css.gg/icon/close -->
       <svg
-        class="translate-y-[0.8px]"
         width="12"
         height="12"
         viewBox="0 0 24 24"

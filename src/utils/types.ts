@@ -1,4 +1,4 @@
-import type { GetTransactionsQuery } from '../worker/graphql-types'
+import type { GetTransactionsQuery } from '../../worker/graphql-types'
 
 export type Transaction = NonNullable<
   NonNullable<GetTransactionsQuery['transactions']['nodes']>[number]

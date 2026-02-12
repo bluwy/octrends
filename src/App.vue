@@ -4,7 +4,7 @@ import BalanceOverTimeChart from './components/charts/BalanceOverTimeChart.vue'
 import SearchInput from './components/SearchInput.vue'
 import Label from './components/Label.vue'
 import githubIcon from './assets/github.svg'
-import type { CollectiveData } from './types'
+import type { CollectiveData } from './utils/types'
 
 // Example orgs, can be dynamic or fetched
 const selectedOrgs = ref<string[]>(['e18e', 'vitest'])
@@ -12,7 +12,6 @@ const data = ref<CollectiveData[]>([])
 
 watch([selectedOrgs], fetchData, { immediate: true, deep: true })
 async function fetchData() {
-  console.log('Fetching data for orgs:', selectedOrgs.value)
   const newData: CollectiveData[] = []
 
   await Promise.all(
@@ -48,7 +47,6 @@ async function fetchData() {
         <Label
           v-for="org in selectedOrgs"
           :key="org"
-          closable
           @close="selectedOrgs.splice(selectedOrgs.indexOf(org), 1)"
         >
           <a
@@ -63,7 +61,9 @@ async function fetchData() {
     </section>
     <section class="w-full max-w-2xl px-4 mx-auto">
       <hr />
-      <BalanceOverTimeChart :data="data" />
+      <section>
+        <BalanceOverTimeChart :data="data" />
+      </section>
     </section>
   </div>
 </template>

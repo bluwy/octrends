@@ -1,3 +1,5 @@
+import { colorsDark } from '@unovis/ts'
+
 export const chartCurrencyFormatter = new Intl.NumberFormat('en-US', {
   style: 'currency',
   currency: 'USD',
@@ -15,6 +17,8 @@ export const chartDailyDateFormatter = new Intl.DateTimeFormat('en-US', {
   month: 'short',
   year: 'numeric',
 })
+
+export const chartLegendColors = colorsDark
 
 export function debounce(fn: Function, wait: number) {
   let t: number
