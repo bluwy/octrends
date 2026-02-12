@@ -2,7 +2,7 @@
 import { type BulletLegendItemInterface, Scale } from '@unovis/ts'
 import {
   VisXYContainer,
-  VisLine,
+  VisGroupedBar,
   VisAxis,
   VisTooltip,
   VisCrosshair,
@@ -29,22 +29,23 @@ interface DataPoint {
 const earliestDate = computed(() => getEarliestDate(props.data))
 const latestDate = computed(() => getLatestDate(props.data))
 
-const dailyDates = computed(() => {
+const monthlyDates = computed(() => {
   if (!earliestDate.value || !latestDate.value) {
     return []
   }
   const dates: Date[] = []
   const currentDate = new Date(earliestDate.value)
   currentDate.setUTCHours(0, 0, 0, 0)
+  currentDate.setUTCDate(1)
   while (currentDate <= latestDate.value) {
     dates.push(new Date(currentDate))
-    currentDate.setUTCDate(currentDate.getUTCDate() + 1)
+    currentDate.setUTCMonth(currentDate.getUTCMonth() + 1)
   }
   return dates
 })
 
 const data = computed<DataPoint[]>(() => {
-  const computedData = dailyDates.value.map<DataPoint>((date) => ({
+  const computedData = monthlyDates.value.map<DataPoint>((date) => ({
     x: date,
     y: props.data.map(() => undefined),
   }))
@@ -55,27 +56,33 @@ const data = computed<DataPoint[]>(() => {
 
     const firstTxDate = new Date(collective.transactions[0]!.createdAt)
     firstTxDate.setUTCHours(0, 0, 0, 0)
-    const dateIndexStart = dailyDates.value.findIndex((d) => d.getTime() === firstTxDate.getTime())
+    firstTxDate.setUTCDate(1)
+    const dateIndexStart = monthlyDates.value.findIndex(
+      (d) => d.getTime() === firstTxDate.getTime(),
+    )
 
-    let lastBalance = 0
     let lastTxIndex = 0
-    for (let dateIndex = dateIndexStart; dateIndex < dailyDates.value.length; dateIndex++) {
-      // Get the last transaction balance of the date day, if there is no transaction on that day, use the last known balance
-      const date = dailyDates.value[dateIndex]!
+    for (let dateIndex = dateIndexStart; dateIndex < monthlyDates.value.length; dateIndex++) {
+      // Collect all income transactions within this month
+      const date = monthlyDates.value[dateIndex]!
 
+      let total = 0
       for (let txIndex = lastTxIndex; txIndex < collective.transactions.length; txIndex++) {
         const tx = collective.transactions[txIndex]!
-        // Is this transaction within the date day
+        // Is this transaction within the date month
         const txDate = new Date(tx.createdAt)
-        if (date <= txDate && txDate < new Date(date.getTime() + 24 * 60 * 60 * 1000)) {
-          if (tx.balanceInHostCurrency?.valueInCents) {
-            lastBalance = tx.balanceInHostCurrency.valueInCents / 100
+        const nextMonth = new Date(date.getTime())
+        nextMonth.setUTCMonth(nextMonth.getUTCMonth() + 1)
+        if (date <= txDate && txDate < nextMonth) {
+          const amount = tx.amountInHostCurrency?.valueInCents ?? 0
+          if (amount > 0) {
+            total += amount / 100
           }
           lastTxIndex = txIndex + 1
         }
       }
 
-      computedData[dateIndex]!.y[dataIndex] = lastBalance
+      computedData[dateIndex]!.y[dataIndex] = total
     }
   }
 
@@ -89,7 +96,7 @@ const legends = computed<BulletLegendItemInterface[]>(() => {
 })
 
 function tooltipTemplate(d: DataPoint) {
-  return `${chartDailyDateFormatter.format(d.x)}: ${d.y
+  return `${chartMonthlyDateFormatter.format(d.x)}: ${d.y
     .filter(Boolean)
     .sort()
     .map((y) => chartCurrencyFormatter.format(y!))
@@ -98,13 +105,14 @@ function tooltipTemplate(d: DataPoint) {
 </script>
 
 <template>
-  <h3 class="text-xl font-400 m-0">Balance over time</h3>
+  <h3 class="text-xl font-400 m-0">Monthly income</h3>
   <VisBulletLegend class="text-center mb-2" :items="legends" />
   <VisXYContainer :data="data" :xScale="Scale.scaleTime()">
-    <VisLine
+    <VisGroupedBar
       :data="data"
       :x="(d: DataPoint) => +d.x"
       :y="Array.from({ length: props.data.length }, (_, i) => (d: DataPoint) => d.y[i])"
+      :groupPadding="0.5"
     />
     <VisAxis type="x" :tickFormat="(x: number) => chartMonthlyDateFormatter.format(x)" />
     <VisAxis type="y" :tickFormat="(y: number) => chartCurrencyFormatter.format(y)" />

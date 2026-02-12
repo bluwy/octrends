@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import BalanceOverTimeChart from './components/charts/BalanceOverTimeChart.vue'
+import MonthlyIncomeChart from './components/charts/MonthlyIncomeChart.vue'
 import SearchInput from './components/SearchInput.vue'
 import Label from './components/Label.vue'
 import githubIcon from './assets/github.svg'
@@ -63,6 +64,7 @@ async function fetchData() {
       <hr />
       <section>
         <BalanceOverTimeChart :data="data" />
+        <MonthlyIncomeChart :data="data" />
       </section>
     </section>
   </div>
