@@ -80,7 +80,7 @@ const query = /* GraphQL */ `
   }
 `
 
-type Transaction = NonNullable<GetTransactionsQuery['transactions']['nodes']>[number]
+type Transaction = NonNullable<NonNullable<GetTransactionsQuery['transactions']['nodes']>[number]>
 
 interface CacheMetadata {
   /** Query version */
@@ -211,7 +211,10 @@ async function fetchTransactions(
         `Fetched ${nodes.length} transactions for "${slug}" (offset: ${offset}, total: ${totalCount})`,
       )
 
-    transactions.push(...nodes)
+    for (const node of nodes) {
+      if (node == null) continue // this shouldn't happen in practice
+      transactions.push(node)
+    }
     offset += nodes.length
 
     if (offset >= totalCount) break

@@ -4,20 +4,34 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "update-data": "node scripts/update-data.ts",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
     "worker:dev": "wrangler dev",
     "worker:deploy": "wrangler deploy",
     "worker:typegen": "wrangler types worker/worker-configuration.d.ts",
     "graphql:codegen": "graphql-codegen --config graphql-codegen.ts",
-    "format": "prettier --write \"**/*.ts\""
+    "format": "prettier --write \"**/*.{ts,css,vue}\""
+  },
+  "dependencies": {
+    "@unovis/ts": "^1.6.4",
+    "@unovis/vue": "^1.6.4",
+    "vue": "^3.5.25"
   },
   "devDependencies": {
     "@graphql-codegen/cli": "^6.1.1",
     "@graphql-codegen/typescript-operations": "^5.0.7",
     "@types/node": "^25.2.3",
+    "@unocss/preset-mini": "^66.6.0",
+    "@unocss/preset-uno": "^66.6.0",
+    "@unocss/preset-wind4": "^66.6.0",
+    "@unocss/vite": "^66.6.0",
+    "@vitejs/plugin-vue": "^6.0.2",
+    "@vue/tsconfig": "^0.8.1",
     "prettier": "^3.8.1",
     "typescript": "^5.9.3",
     "vite": "^8.0.0-beta.13",
+    "vue-tsc": "^3.1.5",
     "wrangler": "^4.64.0"
   }
 }
