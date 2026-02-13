@@ -1,18 +1,18 @@
 import { colorsDark } from '@unovis/ts'
 
-export const chartCurrencyFormatter = new Intl.NumberFormat('en-US', {
+export const chartCurrencyFormatter = new Intl.NumberFormat(undefined, {
   style: 'currency',
   currency: 'USD',
   currencyDisplay: 'code',
   maximumFractionDigits: 0,
 })
 
-export const chartMonthlyDateFormatter = new Intl.DateTimeFormat('en-US', {
+export const chartMonthlyDateFormatter = new Intl.DateTimeFormat(undefined, {
   month: 'short',
   year: 'numeric',
 })
 
-export const chartDailyDateFormatter = new Intl.DateTimeFormat('en-US', {
+export const chartDailyDateFormatter = new Intl.DateTimeFormat(undefined, {
   day: 'numeric',
   month: 'short',
   year: 'numeric',

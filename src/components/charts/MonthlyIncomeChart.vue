@@ -13,6 +13,7 @@ import { computed } from 'vue'
 import {
   chartCurrencyFormatter,
   chartDailyDateFormatter,
+  chartLegendColors,
   chartMonthlyDateFormatter,
 } from '../../utils/common'
 import { getEarliestDate, getLatestDate } from '../../utils/data'
@@ -96,11 +97,35 @@ const legends = computed<BulletLegendItemInterface[]>(() => {
 })
 
 function tooltipTemplate(d: DataPoint) {
-  return `${chartMonthlyDateFormatter.format(d.x)}: ${d.y
-    .filter(Boolean)
-    .sort()
-    .map((y) => chartCurrencyFormatter.format(y!))
-    .join(', ')}`
+  const items = props.data
+    .map((collective, index) => {
+      const value = d.y[index]
+      if (value === undefined) return null
+      return {
+        name: collective.name,
+        value,
+        color: chartLegendColors[index % chartLegendColors.length],
+      }
+    })
+    .filter((v) => v !== null)
+
+  return `
+    <div>
+      <p class="mt-0 mb-1">${chartMonthlyDateFormatter.format(d.x)}</p>
+      <ul class="p-0 m-0">
+        ${items
+          .map(
+            (item) => `
+              <li class="text-sm flex items-center gap-1">
+                <span class="inline-block rounded-full w-2 h-2" style="background-color: ${item.color}"></span>
+                ${item!.name}: ${chartCurrencyFormatter.format(item!.value)}
+              </li>
+            `,
+          )
+          .join('')}
+      </ul>
+    </div>
+  `
 }
 </script>
 
@@ -113,6 +138,7 @@ function tooltipTemplate(d: DataPoint) {
       :x="(d: DataPoint) => +d.x"
       :y="Array.from({ length: props.data.length }, (_, i) => (d: DataPoint) => d.y[i])"
       :groupPadding="0.5"
+      :barMinHeight="0"
     />
     <VisAxis type="x" :tickFormat="(x: number) => chartMonthlyDateFormatter.format(x)" />
     <VisAxis type="y" :tickFormat="(y: number) => chartCurrencyFormatter.format(y)" />
