@@ -20,7 +20,11 @@ async function fetchData() {
       try {
         const res = await fetch(`/api/transactions/${org}`)
         const result = await res.json()
-        newData.push({ name: org, transactions: result.transactions })
+        newData.push({
+          name: org,
+          createdAt: result.account.createdAt,
+          transactions: result.transactions,
+        })
       } catch (e) {
         console.error(`Error fetching data for ${org}:`, e)
       }

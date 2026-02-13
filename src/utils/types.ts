@@ -6,6 +6,7 @@ export type Transaction = NonNullable<
 
 export interface CollectiveData {
   name: string
+  createdAt: string
   transactions: Transaction[]
 }
 

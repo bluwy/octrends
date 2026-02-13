@@ -12,7 +12,6 @@ import type { CollectiveData } from '../../utils/types'
 import { computed } from 'vue'
 import {
   chartCurrencyFormatter,
-  chartDailyDateFormatter,
   chartLegendColors,
   chartMonthlyDateFormatter,
 } from '../../utils/common'
@@ -55,11 +54,11 @@ const data = computed<DataPoint[]>(() => {
     const collective = props.data[dataIndex]!
     if (collective.transactions.length === 0) continue
 
-    const firstTxDate = new Date(collective.transactions[0]!.createdAt)
-    firstTxDate.setUTCHours(0, 0, 0, 0)
-    firstTxDate.setUTCDate(1)
+    const createdAtDate = new Date(collective.transactions[0]!.createdAt)
+    createdAtDate.setUTCHours(0, 0, 0, 0)
+    createdAtDate.setUTCDate(1)
     const dateIndexStart = monthlyDates.value.findIndex(
-      (d) => d.getTime() === firstTxDate.getTime(),
+      (d) => d.getTime() === createdAtDate.getTime(),
     )
 
     let lastTxIndex = 0

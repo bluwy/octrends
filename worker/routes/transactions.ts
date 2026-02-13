@@ -19,6 +19,10 @@ const queryVersion = 'v1'
 // the data we're working with for now (since 2023).
 const query = /* GraphQL */ `
   query GetTransactions($slug: String!, $after: DateTime, $limit: Int!, $offset: Int!) {
+    account(slug: $slug) {
+      id
+      createdAt
+    }
     transactions(
       account: { slug: $slug }
       limit: $limit
@@ -80,6 +84,7 @@ const query = /* GraphQL */ `
   }
 `
 
+type Account = NonNullable<GetTransactionsQuery['account']>
 type Transaction = NonNullable<NonNullable<GetTransactionsQuery['transactions']['nodes']>[number]>
 
 interface CacheMetadata {
@@ -104,7 +109,8 @@ export const handler: RouteHandler = async (request, env, ctx) => {
     const lastUpdated = cached.metadata.lastUpdated
     const age = Date.now() - new Date(lastUpdated).getTime()
 
-    if (age < updateIntervalMs) {
+    // Some data might not have `"account"` field yet (new backwards-compatible version)
+    if (age < updateIntervalMs && cached.value.includes('"account":')) {
       if (env.DEV) console.log(`Using cache for "${slug}", age: ${age}ms`)
 
       return new Response(cached.value, {
@@ -125,16 +131,20 @@ export const handler: RouteHandler = async (request, env, ctx) => {
 
   const currentDate = new Date()
   const lastCreatedAt = transactions ? transactions[transactions.length - 1]?.createdAt : undefined
-  const newTransactions = await fetchTransactions(slug, lastCreatedAt, env)
-  if (newTransactions instanceof Response) {
-    return newTransactions
+  const fetchResult = await fetchTransactions(slug, lastCreatedAt, env)
+
+  if (fetchResult instanceof Response) {
+    return fetchResult
   }
+
+  const account = fetchResult.account
+  const newTransactions = fetchResult.transactions
   if (transactions) {
     transactions.push(...newTransactions)
   } else {
     transactions = newTransactions
   }
-  const result = JSON.stringify({ transactions })
+  const result = JSON.stringify({ account, transactions })
 
   if (env.DEV)
     console.log(
@@ -166,7 +176,8 @@ async function fetchTransactions(
   slug: string,
   after: string | undefined,
   env: Env,
-): Promise<Response | Transaction[]> {
+): Promise<Response | { account: Account; transactions: Transaction[] }> {
+  let lastAccount: Account | null = null
   const transactions: Transaction[] = []
   const limit = 1000 // OC max limit is 1000
   let offset = 0
@@ -211,16 +222,24 @@ async function fetchTransactions(
         `Fetched ${nodes.length} transactions for "${slug}" (offset: ${offset}, total: ${totalCount})`,
       )
 
+    // Add data
+    const account = result.data.account
+    lastAccount = account ?? null
     for (const node of nodes) {
       if (node == null) continue // this shouldn't happen in practice
       transactions.push(node)
     }
-    offset += nodes.length
 
+    // Iterate the next page
+    offset += nodes.length
     if (offset >= totalCount) break
   } while (true)
 
-  return transactions
+  if (!lastAccount) {
+    throw new Error(`Account data missing for collective "${slug}"`)
+  }
+
+  return { account: lastAccount, transactions }
 }
 
 function isAccountNotFound(errors: any): boolean {

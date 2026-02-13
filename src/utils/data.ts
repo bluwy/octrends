@@ -4,12 +4,9 @@ export function getEarliestDate(data: CollectiveData[]): Date | null {
   let earliest: Date | null = null
 
   for (const d of data) {
-    for (const tx of d.transactions) {
-      if (!tx.clearedAt) continue
-      const txDate = new Date(tx.createdAt)
-      if (!earliest || txDate < earliest) {
-        earliest = txDate
-      }
+    const createdAtDate = new Date(d.createdAt)
+    if (!earliest || createdAtDate < earliest) {
+      earliest = createdAtDate
     }
   }
 

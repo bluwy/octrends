@@ -54,9 +54,11 @@ const data = computed<DataPoint[]>(() => {
     const collective = props.data[dataIndex]!
     if (collective.transactions.length === 0) continue
 
-    const firstTxDate = new Date(collective.transactions[0]!.createdAt)
-    firstTxDate.setUTCHours(0, 0, 0, 0)
-    const dateIndexStart = dailyDates.value.findIndex((d) => d.getTime() === firstTxDate.getTime())
+    const createdAtDate = new Date(collective.createdAt)
+    createdAtDate.setUTCHours(0, 0, 0, 0)
+    const dateIndexStart = dailyDates.value.findIndex(
+      (d) => d.getTime() === createdAtDate.getTime(),
+    )
 
     let lastBalance = 0
     let lastTxIndex = 0
