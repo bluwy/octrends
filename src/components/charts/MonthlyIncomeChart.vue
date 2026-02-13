@@ -129,19 +129,21 @@ function tooltipTemplate(d: DataPoint) {
 </script>
 
 <template>
-  <h3 class="text-xl font-400 m-0">Monthly income</h3>
-  <VisBulletLegend class="text-center mb-2" :items="legends" />
-  <VisXYContainer :data="data" :xScale="Scale.scaleTime()">
-    <VisGroupedBar
-      :data="data"
-      :x="(d: DataPoint) => +d.x"
-      :y="Array.from({ length: props.data.length }, (_, i) => (d: DataPoint) => d.y[i])"
-      :groupPadding="0.5"
-      :barMinHeight="0"
-    />
-    <VisAxis type="x" :tickFormat="(x: number) => chartMonthlyDateFormatter.format(x)" />
-    <VisAxis type="y" :tickFormat="(y: number) => chartCurrencyFormatter.format(y)" />
-    <VisCrosshair :template="tooltipTemplate" />
-    <VisTooltip />
-  </VisXYContainer>
+  <section class="w-full max-w-xl mx-auto">
+    <h3 class="text-xl font-400 m-0">Monthly income</h3>
+    <VisBulletLegend class="text-center mb-2" :items="legends" />
+    <VisXYContainer :data="data" :xScale="Scale.scaleTime()">
+      <VisGroupedBar
+        :data="data"
+        :x="(d: DataPoint) => +d.x"
+        :y="Array.from({ length: props.data.length }, (_, i) => (d: DataPoint) => d.y[i])"
+        :groupPadding="0.5"
+        :barMinHeight="0"
+      />
+      <VisAxis type="x" :tickFormat="(x: number) => chartMonthlyDateFormatter.format(x)" />
+      <VisAxis type="y" :tickFormat="(y: number) => chartCurrencyFormatter.format(y)" />
+      <VisCrosshair :template="tooltipTemplate" />
+      <VisTooltip />
+    </VisXYContainer>
+  </section>
 </template>

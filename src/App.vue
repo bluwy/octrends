@@ -2,6 +2,7 @@
 import { ref, watch } from 'vue'
 import BalanceOverTimeChart from './components/charts/BalanceOverTimeChart.vue'
 import MonthlyIncomeChart from './components/charts/MonthlyIncomeChart.vue'
+import MonthlyExpenseChart from './components/charts/MonthlyExpenseChart.vue'
 import SearchInput from './components/SearchInput.vue'
 import Label from './components/Label.vue'
 import githubIcon from './assets/github.svg'
@@ -63,13 +64,14 @@ async function fetchData() {
           </a>
         </Label>
       </div>
+      <hr class="my-8" />
     </section>
-    <section class="w-full max-w-2xl px-4 mx-auto">
-      <hr />
-      <section>
+    <section class="w-full max-w-6xl px-4 mx-auto">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 justify-center items-center">
         <BalanceOverTimeChart :data="data" />
         <MonthlyIncomeChart :data="data" />
-      </section>
+        <MonthlyExpenseChart :data="data" />
+      </div>
     </section>
   </div>
 </template>
