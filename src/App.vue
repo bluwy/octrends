@@ -1,16 +1,25 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import BalanceOverTimeChart from './components/charts/BalanceOverTimeChart.vue'
 import MonthlyIncomeChart from './components/charts/MonthlyIncomeChart.vue'
 import MonthlyExpenseChart from './components/charts/MonthlyExpenseChart.vue'
+import DateRangePicker from './components/DateRangePicker.vue'
 import SearchInput from './components/SearchInput.vue'
 import Label from './components/Label.vue'
 import githubIcon from './assets/github.svg'
+import { endOfToday, getEarliestDate } from './utils/date'
 import type { CollectiveData } from './utils/types'
 
 // Example orgs, can be dynamic or fetched
 const selectedOrgs = ref<string[]>(['e18e', 'vitest'])
 const data = ref<CollectiveData[]>([])
+
+const dateRange = ref<[Date, Date]>()
+const earliestDate = computed(() => getEarliestDate(data.value))
+const selectedEarliestDate = computed(() =>
+  dateRange.value ? dateRange.value[0] : earliestDate.value,
+)
+const selectedLatestDate = computed(() => (dateRange.value ? dateRange.value[1] : endOfToday))
 
 watch([selectedOrgs], fetchData, { immediate: true, deep: true })
 async function fetchData() {
@@ -36,6 +45,13 @@ async function fetchData() {
     return selectedOrgs.value.indexOf(a.name) - selectedOrgs.value.indexOf(b.name)
   })
 }
+
+// Set default date range when earliest or latest date changes
+watch([earliestDate], () => {
+  if (earliestDate.value) {
+    dateRange.value = [earliestDate.value, endOfToday]
+  }
+})
 </script>
 
 <template>
@@ -66,11 +82,31 @@ async function fetchData() {
       </div>
       <hr class="my-8" />
     </section>
-    <section class="w-full max-w-6xl px-4 mx-auto">
+    <section
+      v-if="data.length > 0 && earliestDate && selectedEarliestDate && selectedLatestDate"
+      class="w-full max-w-6xl px-4 mx-auto"
+    >
+      <div class="flex items-center justify-end mb-4 gap-2">
+        <div class="w-80">
+          <DateRangePicker v-model="dateRange" :maxStart="earliestDate" />
+        </div>
+      </div>
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 justify-center items-center">
-        <BalanceOverTimeChart :data="data" />
-        <MonthlyIncomeChart :data="data" />
-        <MonthlyExpenseChart :data="data" />
+        <BalanceOverTimeChart
+          :data="data"
+          :earliestDate="selectedEarliestDate"
+          :latestDate="selectedLatestDate"
+        />
+        <MonthlyIncomeChart
+          :data="data"
+          :earliestDate="selectedEarliestDate"
+          :latestDate="selectedLatestDate"
+        />
+        <MonthlyExpenseChart
+          :data="data"
+          :earliestDate="selectedEarliestDate"
+          :latestDate="selectedLatestDate"
+        />
       </div>
     </section>
   </div>

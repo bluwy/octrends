@@ -15,10 +15,11 @@ import {
   chartLegendColors,
   chartMonthlyDateFormatter,
 } from '../../utils/common'
-import { getEarliestDate, getLatestDate } from '../../utils/data'
 
 const props = defineProps<{
   data: CollectiveData[]
+  earliestDate: Date
+  latestDate: Date
 }>()
 
 interface DataPoint {
@@ -26,18 +27,12 @@ interface DataPoint {
   y: (number | undefined)[]
 }
 
-const earliestDate = computed(() => getEarliestDate(props.data))
-const latestDate = computed(() => getLatestDate(props.data))
-
 const monthlyDates = computed(() => {
-  if (!earliestDate.value || !latestDate.value) {
-    return []
-  }
   const dates: Date[] = []
-  const currentDate = new Date(earliestDate.value)
+  const currentDate = new Date(props.earliestDate)
   currentDate.setUTCHours(0, 0, 0, 0)
   currentDate.setUTCDate(1)
-  while (currentDate <= latestDate.value) {
+  while (currentDate <= props.latestDate) {
     dates.push(new Date(currentDate))
     currentDate.setUTCMonth(currentDate.getUTCMonth() + 1)
   }
@@ -57,9 +52,10 @@ const data = computed<DataPoint[]>(() => {
     const createdAtDate = new Date(collective.transactions[0]!.createdAt)
     createdAtDate.setUTCHours(0, 0, 0, 0)
     createdAtDate.setUTCDate(1)
-    const dateIndexStart = monthlyDates.value.findIndex(
+    let dateIndexStart = monthlyDates.value.findIndex(
       (d) => d.getTime() === createdAtDate.getTime(),
     )
+    if (dateIndexStart === -1) dateIndexStart = 0
 
     let lastTxIndex = 0
     for (let dateIndex = dateIndexStart; dateIndex < monthlyDates.value.length; dateIndex++) {

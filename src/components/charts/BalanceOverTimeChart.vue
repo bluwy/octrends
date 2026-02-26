@@ -16,10 +16,11 @@ import {
   chartLegendColors,
   chartMonthlyDateFormatter,
 } from '../../utils/common'
-import { getEarliestDate, getLatestDate } from '../../utils/data'
 
 const props = defineProps<{
   data: CollectiveData[]
+  earliestDate: Date
+  latestDate: Date
 }>()
 
 interface DataPoint {
@@ -27,17 +28,11 @@ interface DataPoint {
   y: (number | undefined)[]
 }
 
-const earliestDate = computed(() => getEarliestDate(props.data))
-const latestDate = computed(() => getLatestDate(props.data))
-
 const dailyDates = computed(() => {
-  if (!earliestDate.value || !latestDate.value) {
-    return []
-  }
   const dates: Date[] = []
-  const currentDate = new Date(earliestDate.value)
+  const currentDate = new Date(props.earliestDate)
   currentDate.setUTCHours(0, 0, 0, 0)
-  while (currentDate <= latestDate.value) {
+  while (currentDate <= props.latestDate) {
     dates.push(new Date(currentDate))
     currentDate.setUTCDate(currentDate.getUTCDate() + 1)
   }
@@ -56,25 +51,38 @@ const data = computed<DataPoint[]>(() => {
 
     const createdAtDate = new Date(collective.createdAt)
     createdAtDate.setUTCHours(0, 0, 0, 0)
-    const dateIndexStart = dailyDates.value.findIndex(
-      (d) => d.getTime() === createdAtDate.getTime(),
-    )
+    let dateIndexStart = dailyDates.value.findIndex((d) => d.getTime() === createdAtDate.getTime())
+    if (dateIndexStart === -1) dateIndexStart = 0
 
-    let lastBalance = 0
+    let lastBalance = (() => {
+      // Work backwards to find the last balance before first date
+      const firstDate = dailyDates.value[dateIndexStart]!
+      for (let txIndex = collective.transactions.length - 1; txIndex >= 0; txIndex--) {
+        const tx = collective.transactions[txIndex]!
+        const txDate = new Date(tx.createdAt)
+        if (txDate < firstDate && tx.balanceInHostCurrency?.valueInCents) {
+          return tx.balanceInHostCurrency.valueInCents / 100
+        }
+      }
+      return 0
+    })()
     let lastTxIndex = 0
     for (let dateIndex = dateIndexStart; dateIndex < dailyDates.value.length; dateIndex++) {
       // Get the last transaction balance of the date day, if there is no transaction on that day, use the last known balance
       const date = dailyDates.value[dateIndex]!
+      const tmr = new Date(date.getTime() + 24 * 60 * 60 * 1000)
 
       for (let txIndex = lastTxIndex; txIndex < collective.transactions.length; txIndex++) {
         const tx = collective.transactions[txIndex]!
         // Is this transaction within the date day
         const txDate = new Date(tx.createdAt)
-        if (date <= txDate && txDate < new Date(date.getTime() + 24 * 60 * 60 * 1000)) {
+        if (date <= txDate && txDate < tmr) {
           if (tx.balanceInHostCurrency?.valueInCents) {
             lastBalance = tx.balanceInHostCurrency.valueInCents / 100
           }
           lastTxIndex = txIndex + 1
+        } else if (txDate >= tmr) {
+          break
         }
       }
 
