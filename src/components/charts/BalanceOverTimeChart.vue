@@ -134,8 +134,7 @@ function tooltipTemplate(d: DataPoint) {
 </script>
 
 <template>
-  <section class="w-full max-w-xl mx-auto">
-    <h3 class="text-xl font-400 m-0">Balance over time</h3>
+  <div class="w-full max-w-xl">
     <VisBulletLegend class="text-center mb-2" :items="legends" />
     <VisXYContainer :data="data" :xScale="Scale.scaleTime()">
       <VisLine
@@ -143,10 +142,14 @@ function tooltipTemplate(d: DataPoint) {
         :x="(d: DataPoint) => +d.x"
         :y="Array.from({ length: props.data.length }, (_, i) => (d: DataPoint) => d.y[i])"
       />
-      <VisAxis type="x" :tickFormat="(x: number) => chartMonthlyDateFormatter.format(x)" />
+      <VisAxis
+        type="x"
+        :tickFormat="(x: number) => chartMonthlyDateFormatter.format(x)"
+        :numTicks="4"
+      />
       <VisAxis type="y" :tickFormat="(y: number) => chartCurrencyFormatter.format(y)" />
       <VisCrosshair :template="tooltipTemplate" />
       <VisTooltip />
     </VisXYContainer>
-  </section>
+  </div>
 </template>

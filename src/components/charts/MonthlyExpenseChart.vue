@@ -136,7 +136,11 @@ function tooltipTemplate(d: DataPoint) {
         :groupPadding="0.5"
         :barMinHeight="0"
       />
-      <VisAxis type="x" :tickFormat="(x: number) => chartMonthlyDateFormatter.format(x)" />
+      <VisAxis
+        type="x"
+        :tickFormat="(x: number) => chartMonthlyDateFormatter.format(x)"
+        :numTicks="4"
+      />
       <VisAxis type="y" :tickFormat="(y: number) => chartCurrencyFormatter.format(y)" />
       <VisCrosshair :template="tooltipTemplate" />
       <VisTooltip />

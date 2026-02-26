@@ -9,6 +9,7 @@ import Label from './components/Label.vue'
 import githubIcon from './assets/github.svg'
 import { endOfToday, getEarliestDate } from './utils/date'
 import type { CollectiveData } from './utils/types'
+import BalanceSection from './components/sections/BalanceSection.vue'
 
 // Example orgs, can be dynamic or fetched
 const selectedOrgs = ref<string[]>(['e18e', 'vitest'])
@@ -91,12 +92,12 @@ watch([earliestDate], () => {
           <DateRangePicker v-model="dateRange" :maxStart="earliestDate" />
         </div>
       </div>
+      <BalanceSection
+        :data="data"
+        :earliestDate="selectedEarliestDate"
+        :latestDate="selectedLatestDate"
+      />
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 justify-center items-center">
-        <BalanceOverTimeChart
-          :data="data"
-          :earliestDate="selectedEarliestDate"
-          :latestDate="selectedLatestDate"
-        />
         <MonthlyIncomeChart
           :data="data"
           :earliestDate="selectedEarliestDate"
