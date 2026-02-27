@@ -1,7 +1,8 @@
+import * as account from './routes/account.ts'
 import * as transactions from './routes/transactions.ts'
 import type { RouteHandler } from './types.ts'
 
-const routes: { handler: RouteHandler }[] = [transactions]
+const routes: { handler: RouteHandler }[] = [account, transactions]
 
 export default {
   async fetch(request, env, ctx): Promise<Response> {

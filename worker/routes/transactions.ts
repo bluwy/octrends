@@ -1,10 +1,13 @@
 import type { RouteHandler } from '../types.ts'
 import type { GetTransactionsQuery, GetTransactionsQueryVariables } from '../graphql-types.ts'
-import { getOpenCollectiveTokenHeader, userAgentHeader } from '../utils.ts'
+import {
+  getOpenCollectiveTokenHeader,
+  openCollectiveGraphQLEndpoint,
+  userAgentHeader,
+} from '../utils.ts'
 
 const updateIntervalMs = 1 * 60 * 60 * 1000 // 1 hour
 const responseTtl = 30 * 60 // 30 minutes
-const url = 'https://api.opencollective.com/graphql/v2'
 // Bump this if the query data changes so we invalidate the cache and refetch all the transactions again
 const queryVersion = 'v1'
 // NOTE: OC's data does not seem to be complete from the API, it's missing:
@@ -19,10 +22,6 @@ const queryVersion = 'v1'
 // the data we're working with for now (since 2023).
 const query = /* GraphQL */ `
   query GetTransactions($slug: String!, $after: DateTime, $limit: Int!, $offset: Int!) {
-    account(slug: $slug) {
-      id
-      createdAt
-    }
     transactions(
       account: { slug: $slug }
       limit: $limit
@@ -84,7 +83,6 @@ const query = /* GraphQL */ `
   }
 `
 
-type Account = NonNullable<GetTransactionsQuery['account']>
 type Transaction = NonNullable<NonNullable<GetTransactionsQuery['transactions']['nodes']>[number]>
 
 interface CacheMetadata {
@@ -109,8 +107,7 @@ export const handler: RouteHandler = async (request, env, ctx) => {
     const lastUpdated = cached.metadata.lastUpdated
     const age = Date.now() - new Date(lastUpdated).getTime()
 
-    // Some data might not have `"account"` field yet (new backwards-compatible version)
-    if (age < updateIntervalMs && cached.value.includes('"account":')) {
+    if (age < updateIntervalMs) {
       if (env.DEV) console.log(`Using cache for "${slug}", age: ${age}ms`)
 
       return new Response(cached.value, {
@@ -131,20 +128,18 @@ export const handler: RouteHandler = async (request, env, ctx) => {
 
   const currentDate = new Date()
   const lastCreatedAt = transactions ? transactions[transactions.length - 1]?.createdAt : undefined
-  const fetchResult = await fetchTransactions(slug, lastCreatedAt, env)
+  const newTransactions = await fetchTransactions(slug, lastCreatedAt, env)
 
-  if (fetchResult instanceof Response) {
-    return fetchResult
+  if (newTransactions instanceof Response) {
+    return newTransactions
   }
 
-  const account = fetchResult.account
-  const newTransactions = fetchResult.transactions
   if (transactions) {
     transactions.push(...newTransactions)
   } else {
     transactions = newTransactions
   }
-  const result = JSON.stringify({ account, transactions })
+  const result = JSON.stringify({ transactions })
 
   if (env.DEV)
     console.log(
@@ -176,14 +171,13 @@ async function fetchTransactions(
   slug: string,
   after: string | undefined,
   env: Env,
-): Promise<Response | { account: Account; transactions: Transaction[] }> {
-  let lastAccount: Account | null = null
+): Promise<Response | Transaction[]> {
   const transactions: Transaction[] = []
   const limit = 1000 // OC max limit is 1000
   let offset = 0
 
   do {
-    const response = await fetch(url, {
+    const response = await fetch(openCollectiveGraphQLEndpoint, {
       method: 'POST',
       headers: {
         ...getOpenCollectiveTokenHeader(env),
@@ -223,8 +217,6 @@ async function fetchTransactions(
       )
 
     // Add data
-    const account = result.data.account
-    lastAccount = account ?? null
     for (const node of nodes) {
       if (node == null) continue // this shouldn't happen in practice
       transactions.push(node)
@@ -235,11 +227,7 @@ async function fetchTransactions(
     if (offset >= totalCount) break
   } while (true)
 
-  if (!lastAccount) {
-    throw new Error(`Account data missing for collective "${slug}"`)
-  }
-
-  return { account: lastAccount, transactions }
+  return transactions
 }
 
 function isAccountNotFound(errors: any): boolean {
