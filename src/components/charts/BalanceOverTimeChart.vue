@@ -49,7 +49,7 @@ const data = computed<DataPoint[]>(() => {
     const collective = props.data[dataIndex]!
     if (collective.transactions.length === 0) continue
 
-    const createdAtDate = new Date(collective.createdAt)
+    const createdAtDate = new Date(collective.account.createdAt)
     createdAtDate.setUTCHours(0, 0, 0, 0)
     let dateIndexStart = dailyDates.value.findIndex((d) => d.getTime() === createdAtDate.getTime())
     if (dateIndexStart === -1) dateIndexStart = 0

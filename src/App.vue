@@ -28,12 +28,17 @@ async function fetchData() {
   await Promise.all(
     selectedOrgs.value.map(async (org) => {
       try {
-        const res = await fetch(`/api/transactions/${org}`)
-        const result = await res.json()
+        // Both endpoints have different cache duration, so separated
+        const [accountRes, transactionsRes] = await Promise.all([
+          fetch(`/api/account/${org}`),
+          fetch(`/api/transactions/${org}`),
+        ])
+        const accountResult = await accountRes.json()
+        const transactionsResult = await transactionsRes.json()
         newData.push({
           name: org,
-          createdAt: result.account.createdAt,
-          transactions: result.transactions,
+          account: accountResult.account,
+          transactions: transactionsResult.transactions,
         })
       } catch (e) {
         console.error(`Error fetching data for ${org}:`, e)

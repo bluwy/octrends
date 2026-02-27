@@ -18,7 +18,7 @@ export function getEarliestDate(data: CollectiveData[]): Date | null {
   let earliest: Date | null = null
 
   for (const d of data) {
-    const createdAtDate = new Date(d.createdAt)
+    const createdAtDate = new Date(d.account.createdAt)
     if (!earliest || createdAtDate < earliest) {
       earliest = createdAtDate
     }

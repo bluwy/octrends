@@ -1,4 +1,6 @@
-import type { GetTransactionsQuery } from '../../worker/graphql-types'
+import type { GetAccountQuery, GetTransactionsQuery } from '../../worker/graphql-types'
+
+export type Account = NonNullable<GetAccountQuery['account']>
 
 export type Transaction = NonNullable<
   NonNullable<GetTransactionsQuery['transactions']['nodes']>[number]
@@ -6,7 +8,7 @@ export type Transaction = NonNullable<
 
 export interface CollectiveData {
   name: string
-  createdAt: string
+  account: Account
   transactions: Transaction[]
 }
 
