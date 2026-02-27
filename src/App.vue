@@ -61,16 +61,20 @@ watch([earliestDate], () => {
 
 <template>
   <div>
-    <section class="w-full max-w-2xl px-4 mt-6 mx-auto">
-      <div class="flex items-center justify-between mb-2">
+    <section class="w-full max-w-6xl px-4 mt-4 mx-auto">
+      <div class="flex items-center justify-between my-2">
         <h1 class="text-2xl font-500 m-0">Open Collective Trends</h1>
-        <a href="https://github.com/bluwy/octrends">
+        <a
+          class="flex items-center gap-3 text-gray-100 decoration-none hover:underline focus:underline"
+          href="https://github.com/bluwy/octrends"
+        >
+          <span class="hidden sm:inline">Star on GitHub</span>
           <img :src="githubIcon" alt="GitHub" class="w-5 h-5" />
         </a>
       </div>
-      <p class="opacity-60 mt-2 mb-6">Analyze and compare collective fundings</p>
+      <p class="opacity-60 mt-4 mb-2">Analyze and compare collective fundings</p>
       <SearchInput @submit="(value) => selectedOrgs.push(value)" />
-      <div class="flex flex-wrap gap-4 my-4">
+      <div class="flex flex-wrap gap-4 mt-6 mb-4">
         <Card
           v-for="d in data"
           :key="d.name"
@@ -78,7 +82,7 @@ watch([earliestDate], () => {
           @close="selectedOrgs.splice(selectedOrgs.indexOf(d.name), 1)"
         />
       </div>
-      <hr class="my-8" />
+      <hr class="fade-lines border-white my-8" />
     </section>
     <section
       v-if="data.length > 0 && earliestDate && selectedEarliestDate && selectedLatestDate"
@@ -105,3 +109,32 @@ watch([earliestDate], () => {
     </section>
   </div>
 </template>
+
+<style scoped>
+hr.fade-lines {
+  position: relative;
+  overflow: visible;
+  border: none;
+  height: 2px;
+  background: #cacaca;
+}
+
+hr.fade-lines::before,
+hr.fade-lines::after {
+  content: '';
+  position: absolute;
+  top: 0px;
+  height: 2px;
+  width: 4rem;
+}
+
+hr.fade-lines::before {
+  right: 100%;
+  background: linear-gradient(to right, transparent, #cacaca 90%);
+}
+
+hr.fade-lines::after {
+  left: 100%;
+  background: linear-gradient(to left, transparent, #cacaca 90%);
+}
+</style>
