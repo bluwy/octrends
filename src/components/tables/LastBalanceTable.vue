@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { CollectiveData } from '../../utils/types'
-import { chartCurrencyFormatter } from '../../utils/common'
+import { chartCurrencyFormatter, getChartLegendColor } from '../../utils/common'
 
 const props = defineProps<{
   data: CollectiveData[]
@@ -29,8 +29,10 @@ const lastBalances = computed(() => {
 <template>
   <table class="my-2">
     <tbody>
-      <tr v-for="b in lastBalances" :key="b.name">
-        <td class="align-top opacity-80 p-0 pr-4">{{ b.name }}</td>
+      <tr v-for="(b, i) in lastBalances" :key="b.name">
+        <td class="align-top p-0 pr-4" :style="{ color: getChartLegendColor(i) }">
+          {{ b.name }}
+        </td>
         <td class="text-2xl font-200 leading-6 p-0 pb-4">{{ b.balance }}</td>
       </tr>
     </tbody>

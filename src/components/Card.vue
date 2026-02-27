@@ -51,7 +51,10 @@ function getSocialIconClass(type: string) {
           aria-label="Remove"
         ></button>
       </div>
-      <p class="text-xs line-clamp-2 text-gray-100 opacity-60 my-2" :title="account.description || ''">
+      <p
+        class="text-xs line-clamp-2 text-gray-100 opacity-60 my-2"
+        :title="account.description || ''"
+      >
         {{ account.description || '' }}
       </p>
     </div>

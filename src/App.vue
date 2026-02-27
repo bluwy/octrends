@@ -6,6 +6,7 @@ import DateRangePicker from './components/DateRangePicker.vue'
 import SearchInput from './components/SearchInput.vue'
 import Card from './components/Card.vue'
 import githubIcon from './assets/github.svg'
+import { getChartLegendColor } from './utils/common'
 import { endOfToday, getEarliestDate } from './utils/date'
 import type { CollectiveData } from './utils/types'
 import BalanceSection from './components/sections/BalanceSection.vue'
@@ -20,6 +21,19 @@ const selectedEarliestDate = computed(() =>
   dateRange.value ? dateRange.value[0] : earliestDate.value,
 )
 const selectedLatestDate = computed(() => (dateRange.value ? dateRange.value[1] : endOfToday))
+
+const vsColoredHtml = computed(() => {
+  if (data.value.length === 0) return ''
+  let str = ''
+  for (let i = 0; i < data.value.length; i++) {
+    const d = data.value[i]!
+    str += `<span style=\"color: ${getChartLegendColor(i)}\">${d.name}</span>`
+    if (i < data.value.length - 1) {
+      str += ' vs '
+    }
+  }
+  return str
+})
 
 watch([selectedOrgs], fetchData, { immediate: true, deep: true })
 async function fetchData() {
@@ -88,7 +102,8 @@ watch([earliestDate], () => {
       v-if="data.length > 0 && earliestDate && selectedEarliestDate && selectedLatestDate"
       class="w-full max-w-6xl px-4 mx-auto"
     >
-      <div class="flex items-center justify-end mb-4 gap-2">
+      <div class="flex items-center justify-between mb-4 gap-2">
+        <h2 class="text-xl font-500 m-0" v-html="vsColoredHtml"></h2>
         <DateRangePicker v-model="dateRange" :minDate="earliestDate" />
       </div>
       <BalanceSection
