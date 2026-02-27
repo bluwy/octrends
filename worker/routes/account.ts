@@ -12,7 +12,8 @@ const query = /* GraphQL */ `
   query GetAccount($slug: String!) {
     account(slug: $slug) {
       id
-      createdAt
+      slug
+      name
       description
       tags
       socialLinks {
@@ -20,6 +21,7 @@ const query = /* GraphQL */ `
         url
       }
       imageUrl
+      createdAt
     }
   }
 `

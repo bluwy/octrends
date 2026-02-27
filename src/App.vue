@@ -4,7 +4,7 @@ import IncomeSection from './components/sections/IncomeSection.vue'
 import ExpenseSection from './components/sections/ExpenseSection.vue'
 import DateRangePicker from './components/DateRangePicker.vue'
 import SearchInput from './components/SearchInput.vue'
-import Label from './components/Label.vue'
+import Card from './components/Card.vue'
 import githubIcon from './assets/github.svg'
 import { endOfToday, getEarliestDate } from './utils/date'
 import type { CollectiveData } from './utils/types'
@@ -70,20 +70,13 @@ watch([earliestDate], () => {
       </div>
       <p class="opacity-60 mt-2 mb-6">Analyze and compare collective fundings</p>
       <SearchInput @submit="(value) => selectedOrgs.push(value)" />
-      <div class="flex flex-wrap gap-2 my-4">
-        <Label
-          v-for="org in selectedOrgs"
-          :key="org"
-          @close="selectedOrgs.splice(selectedOrgs.indexOf(org), 1)"
-        >
-          <a
-            class="text-gray-100 decoration-none hover:underline focus:underline"
-            :href="`https://opencollective.com/${org}`"
-            target="_blank"
-          >
-            {{ org }}
-          </a>
-        </Label>
+      <div class="flex flex-wrap gap-4 my-4">
+        <Card
+          v-for="d in data"
+          :key="d.name"
+          :account="d.account"
+          @close="selectedOrgs.splice(selectedOrgs.indexOf(d.name), 1)"
+        />
       </div>
       <hr class="my-8" />
     </section>
