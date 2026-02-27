@@ -125,8 +125,7 @@ function tooltipTemplate(d: DataPoint) {
 </script>
 
 <template>
-  <section class="w-full max-w-xl mx-auto">
-    <h3 class="text-xl font-400 m-0">Monthly expense</h3>
+  <div class="w-full max-w-xl">
     <VisBulletLegend class="text-center mb-2" :items="legends" />
     <VisXYContainer :data="data" :xScale="Scale.scaleTime()">
       <VisGroupedBar
@@ -145,5 +144,5 @@ function tooltipTemplate(d: DataPoint) {
       <VisCrosshair :template="tooltipTemplate" />
       <VisTooltip />
     </VisXYContainer>
-  </section>
+  </div>
 </template>

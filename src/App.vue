@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import BalanceOverTimeChart from './components/charts/BalanceOverTimeChart.vue'
-import MonthlyIncomeChart from './components/charts/MonthlyIncomeChart.vue'
-import MonthlyExpenseChart from './components/charts/MonthlyExpenseChart.vue'
+import IncomeSection from './components/sections/IncomeSection.vue'
+import ExpenseSection from './components/sections/ExpenseSection.vue'
 import DateRangePicker from './components/DateRangePicker.vue'
 import SearchInput from './components/SearchInput.vue'
 import Label from './components/Label.vue'
@@ -97,18 +96,16 @@ watch([earliestDate], () => {
         :earliestDate="selectedEarliestDate"
         :latestDate="selectedLatestDate"
       />
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 justify-center items-center">
-        <MonthlyIncomeChart
-          :data="data"
-          :earliestDate="selectedEarliestDate"
-          :latestDate="selectedLatestDate"
-        />
-        <MonthlyExpenseChart
-          :data="data"
-          :earliestDate="selectedEarliestDate"
-          :latestDate="selectedLatestDate"
-        />
-      </div>
+      <IncomeSection
+        :data="data"
+        :earliestDate="selectedEarliestDate"
+        :latestDate="selectedLatestDate"
+      />
+      <ExpenseSection
+        :data="data"
+        :earliestDate="selectedEarliestDate"
+        :latestDate="selectedLatestDate"
+      />
     </section>
   </div>
 </template>
