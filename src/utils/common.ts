@@ -18,6 +18,12 @@ export const chartDailyDateFormatter = new Intl.DateTimeFormat(undefined, {
   year: 'numeric',
 })
 
+export const dateOnlyFormatter = new Intl.DateTimeFormat(undefined, {
+  year: 'numeric',
+  month: 'short',
+  day: 'numeric',
+})
+
 export const chartLegendColors = colorsDark
 
 export function debounce(fn: Function, wait: number) {

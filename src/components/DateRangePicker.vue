@@ -1,22 +1,18 @@
 <script setup lang="ts">
 import { VueDatePicker } from '@vuepic/vue-datepicker'
 import { endOfToday, startOfDay } from '../utils/date'
+import { dateOnlyFormatter } from '../utils/common'
 
 const range = defineModel<[Date, Date]>()
 const props = defineProps<{
   maxStart: Date
 }>()
 
-const dateFormatter = new Intl.DateTimeFormat(undefined, {
-  year: 'numeric',
-  month: 'short',
-  day: 'numeric',
-})
 function formatDate(date: Date | Date[]) {
   if (Array.isArray(date)) {
-    return `${dateFormatter.format(date[0])} - ${dateFormatter.format(date[1])}`
+    return `${dateOnlyFormatter.format(date[0])} - ${dateOnlyFormatter.format(date[1])}`
   }
-  return dateFormatter.format(date)
+  return dateOnlyFormatter.format(date)
 }
 
 const today = new Date(endOfToday)
