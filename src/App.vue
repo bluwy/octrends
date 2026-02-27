@@ -87,9 +87,7 @@ watch([earliestDate], () => {
       class="w-full max-w-6xl px-4 mx-auto"
     >
       <div class="flex items-center justify-end mb-4 gap-2">
-        <div class="w-80">
-          <DateRangePicker v-model="dateRange" :maxStart="earliestDate" />
-        </div>
+        <DateRangePicker v-model="dateRange" :minDate="earliestDate" />
       </div>
       <BalanceSection
         :data="data"
