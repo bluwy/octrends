@@ -2,6 +2,7 @@
 import MonthlyIncomeChart from '../charts/MonthlyIncomeChart.vue'
 import type { CollectiveData } from '../../utils/types'
 import TopIncomeSourcesTable from '../tables/TopIncomeSourcesTable.vue'
+import TotalIncomeTable from '../tables/TotalIncomeTable.vue'
 
 const props = defineProps<{
   data: CollectiveData[]
@@ -11,8 +12,8 @@ const props = defineProps<{
 </script>
 
 <template>
-  <div class="my-8">
-    <h3 class="text-xl font-400 m-0">Income</h3>
+  <div class="mt-8 mb-16">
+    <h3 class="text-xl font-400 m-0 pt-2 border-t-solid border-t-2 border-gray-700">Income</h3>
     <div class="flex justify-between gap-8">
       <div class="flex-1">
         <MonthlyIncomeChart
@@ -22,6 +23,11 @@ const props = defineProps<{
         />
       </div>
       <div class="flex-1">
+        <TotalIncomeTable
+          :data="props.data"
+          :earliestDate="props.earliestDate"
+          :latestDate="props.latestDate"
+        />
         <TopIncomeSourcesTable
           :data="props.data"
           :earliestDate="props.earliestDate"
