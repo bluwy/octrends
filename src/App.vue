@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import SummarySection from './components/sections/SummarySection.vue'
+import BalanceSection from './components/sections/BalanceSection.vue'
 import IncomeSection from './components/sections/IncomeSection.vue'
 import ExpenseSection from './components/sections/ExpenseSection.vue'
 import DateRangePicker from './components/DateRangePicker.vue'
@@ -9,7 +11,6 @@ import githubIcon from './assets/github.svg'
 import { getChartLegendColor } from './utils/common'
 import { endOfToday, getEarliestDate } from './utils/date'
 import type { CollectiveData } from './utils/types'
-import BalanceSection from './components/sections/BalanceSection.vue'
 
 // Example orgs, can be dynamic or fetched
 const selectedOrgs = ref<string[]>(['e18e', 'vitest'])
@@ -106,6 +107,11 @@ watch([earliestDate], () => {
         <h2 class="text-xl font-500 m-0" v-html="vsColoredHtml"></h2>
         <DateRangePicker v-model="dateRange" :minDate="earliestDate" />
       </div>
+      <SummarySection
+        :data="data"
+        :earliestDate="selectedEarliestDate"
+        :latestDate="selectedLatestDate"
+      />
       <BalanceSection
         :data="data"
         :earliestDate="selectedEarliestDate"
