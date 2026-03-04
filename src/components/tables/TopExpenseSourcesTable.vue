@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import type { CollectiveData } from '../../utils/types'
 import { chartCurrencyFormatter, getChartLegendColor } from '../../utils/common'
 import InlineSelect from '../InlineSelect.vue'
+import RowCountSelect from '../RowCountSelect.vue'
 
 const props = defineProps<{
   data: CollectiveData[]
@@ -36,6 +37,8 @@ const filteredExpenses = computed(() => {
   return expenses
 })
 
+const rowCount = ref(10)
+
 const topSources = computed(() => {
   const sourcesMap: Record<
     string,
@@ -64,21 +67,27 @@ const topSources = computed(() => {
     }
     sourcesMap[key].total += amount
   })
-  return Object.values(sourcesMap)
-    .sort((a, b) => b.total - a.total)
-    .slice(0, 10) // top 10
+  return Object.values(sourcesMap).sort((a, b) => b.total - a.total)
+})
+
+const topSourcesList = computed(() => {
+  if (rowCount.value === Infinity) return topSources.value
+  return topSources.value.slice(0, rowCount.value)
 })
 </script>
 
 <template>
   <div>
-    <h4 class="text-lg font-500 mb-2">
-      Top Expense Sources in
-      <InlineSelect v-model="choice" :options="choices" />
+    <h4 class="text-lg font-500 mb-2 flex items-center justify-between gap-2">
+      <span>
+        Top Expense Sources in
+        <InlineSelect v-model="choice" :options="choices" />
+      </span>
+      <RowCountSelect v-model="rowCount" />
     </h4>
     <table class="w-full gap-2">
       <tbody>
-        <tr v-for="source in topSources" :key="source.key">
+        <tr v-for="source in topSourcesList" :key="source.key">
           <td class="p-0 pr-1 pb-1">
             <a
               :href="`https://opencollective.com/${source.slug}`"
