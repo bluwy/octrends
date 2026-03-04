@@ -8,6 +8,9 @@ import {
 
 const updateIntervalMs = 1 * 60 * 60 * 1000 // 1 hour
 const responseTtl = 30 * 60 // 30 minutes
+const maxKvSize = 26_214_000 // 26214400 bytes (26MiB) minus some bytes for leeway.
+const textEncoder = new TextEncoder()
+const textDecoder = new TextDecoder()
 // Bump this if the query data changes so we invalidate the cache and refetch all the transactions again
 const queryVersion = 'v1'
 // NOTE: OC's data does not seem to be complete from the API, it's missing:
@@ -85,11 +88,15 @@ const query = /* GraphQL */ `
 
 type Transaction = NonNullable<NonNullable<GetTransactionsQuery['transactions']['nodes']>[number]>
 
+// TODO: Maybe also track when the oppositeAccount is last updated in case the slug or name changes.
+// Could be quite intensive to query though if there's like thousands of accounts.
 interface CacheMetadata {
   /** Query version */
   version: string
   /** ISO string */
   lastUpdated: string
+  /** Number of chunks the value is split into */
+  chunkCount: number
 }
 
 export const handler: RouteHandler = async (request, env, ctx) => {
@@ -100,15 +107,15 @@ export const handler: RouteHandler = async (request, env, ctx) => {
 
   const slug = match[1]
 
-  const cached = await env.OPEN_COLLECTIVE_TRANSACTIONS.getWithMetadata<CacheMetadata>(slug)
-  // Transactions is only set if we have cached data but is outdated
+  const cached = await kvGetWithChunks(env.OPEN_COLLECTIVE_TRANSACTIONS, slug, env)
   let transactions: Transaction[] | undefined
   if (cached.value && cached.metadata?.version === queryVersion && cached.metadata?.lastUpdated) {
     const lastUpdated = cached.metadata.lastUpdated
     const age = Date.now() - new Date(lastUpdated).getTime()
+    const chunkCount = cached.metadata.chunkCount
 
     if (age < updateIntervalMs) {
-      if (env.DEV) console.log(`Using cache for "${slug}", age: ${age}ms`)
+      if (env.DEV) console.log(`Using cache for "${slug}", age: ${age}ms, chunks: ${chunkCount}`)
 
       return new Response(cached.value, {
         headers: {
@@ -147,12 +154,16 @@ export const handler: RouteHandler = async (request, env, ctx) => {
     )
 
   ctx.waitUntil(
-    env.OPEN_COLLECTIVE_TRANSACTIONS.put(slug, result, {
-      metadata: {
+    kvPutWithChunks(
+      env.OPEN_COLLECTIVE_TRANSACTIONS,
+      slug,
+      result,
+      {
         version: queryVersion,
         lastUpdated: currentDate.toISOString(),
       },
-    }),
+      env,
+    ),
   )
 
   return new Response(result, {
@@ -238,4 +249,72 @@ function isAccountNotFound(errors: any): boolean {
     return errors[0].extensions.code === 'NotFound'
   } catch {}
   return false
+}
+
+async function kvGetWithChunks(
+  kv: KVNamespace,
+  key: string,
+  env: Env,
+): Promise<KVNamespaceGetWithMetadataResult<string, CacheMetadata>> {
+  const cached = await kv.getWithMetadata<CacheMetadata>(key)
+  if (!cached.value) return cached
+
+  const chunkCount = cached.metadata?.chunkCount || 1
+  if (chunkCount === 1)
+    return { value: cached.value, metadata: cached.metadata, cacheStatus: cached.cacheStatus }
+
+  if (env.DEV)
+    console.log(
+      `Value for key "${key}" is ${cached.value.length} bytes, stored in ${chunkCount} chunks.`,
+    )
+
+  let allStrs = cached.value
+  for (let i = 1; i < chunkCount; i++) {
+    const chunkKey = `${key}-chunk-${i}`
+    const chunk = await kv.get(chunkKey)
+    if (chunk) allStrs += chunk
+    else
+      console.warn(
+        `Missing chunk ${i} for key "${key}" in KV, expected ${chunkCount} chunks but got less.`,
+      )
+  }
+  return { value: allStrs, metadata: cached.metadata, cacheStatus: cached.cacheStatus }
+}
+
+async function kvPutWithChunks(
+  kv: KVNamespace,
+  key: string,
+  value: string,
+  metadata: Record<string, any>,
+  env: Env,
+) {
+  const chunks = splitStringByBytes(value, maxKvSize)
+  const chunkCount = chunks.length
+  if (chunkCount === 1) {
+    await kv.put(key, value, { metadata: { ...metadata, chunkCount } })
+    return
+  }
+
+  if (env.DEV)
+    console.log(
+      `Value for key "${key}" is ${value.length} bytes, splitting into ${chunkCount} chunks for KV storage.`,
+    )
+
+  const promises = []
+  promises.push(kv.put(key, chunks[0], { metadata: { ...metadata, chunkCount } }))
+  for (let i = 1; i < chunkCount; i++) {
+    const chunkKey = `${key}-chunk-${i}`
+    promises.push(kv.put(chunkKey, chunks[i]))
+  }
+  await Promise.all(promises)
+}
+
+function splitStringByBytes(str: string, maxBytes: number): string[] {
+  const bytes = textEncoder.encode(str)
+  const chunks: string[] = []
+  for (let i = 0; i < bytes.length; i += maxBytes) {
+    const chunkBytes = bytes.subarray(i, i + maxBytes)
+    chunks.push(textDecoder.decode(chunkBytes))
+  }
+  return chunks
 }
