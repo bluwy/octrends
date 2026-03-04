@@ -176,6 +176,9 @@ async function fetchTransactions(
   const limit = 1000 // OC max limit is 1000
   let offset = 0
 
+  // Increment after by 1ms because OC's API is inclusive for some reason
+  after = after ? new Date(new Date(after).getTime() + 1).toISOString() : undefined
+
   do {
     const response = await fetch(openCollectiveGraphQLEndpoint, {
       method: 'POST',
