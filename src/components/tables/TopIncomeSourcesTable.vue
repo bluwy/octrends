@@ -37,15 +37,21 @@ const filteredIncome = computed(() => {
 })
 
 const topSources = computed(() => {
-  const sourcesMap: Record<string, { color: string; name: string; slug: string; total: number }> =
-    {}
+  const sourcesMap: Record<
+    string,
+    { key: string; color: string; name: string; slug: string; total: number }
+  > = {}
   filteredIncome.value.forEach((t) => {
-    const name = t.transaction.oppositeAccount?.name || 'Unknown'
-    const slug = t.transaction.oppositeAccount?.slug || ''
+    const oppositeAccount = t.transaction.oppositeAccount
+    if (oppositeAccount == null) return
+
+    const id = oppositeAccount.id
+    let name = oppositeAccount.name || 'Unknown'
+    const slug = oppositeAccount.slug
     const amount = t.transaction.amountInHostCurrency?.valueInCents || 0
-    const key = `${name}-${t.color}`
+    const key = `${id}-${t.color}`
     if (!sourcesMap[key]) {
-      sourcesMap[key] = { color: t.color, name, slug, total: 0 }
+      sourcesMap[key] = { key, color: t.color, name, slug, total: 0 }
     }
     sourcesMap[key].total += amount
   })

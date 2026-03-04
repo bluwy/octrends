@@ -37,11 +37,16 @@ const filteredExpenses = computed(() => {
 })
 
 const topSources = computed(() => {
-  const sourcesMap: Record<string, { color: string; name: string; slug: string; total: number }> =
-    {}
+  const sourcesMap: Record<
+    string,
+    { key: string; color: string; name: string; slug: string; total: number }
+  > = {}
   filteredExpenses.value.forEach((t) => {
-    let name = t.transaction.oppositeAccount?.name || 'Unknown'
+    const oppositeAccount = t.transaction.oppositeAccount
+    if (oppositeAccount == null) return
 
+    const id = oppositeAccount.id
+    let name = oppositeAccount.name || 'Unknown'
     switch (t.transaction.kind) {
       case 'HOST_FEE':
         name += ' (Host Fee)'
@@ -51,11 +56,11 @@ const topSources = computed(() => {
         break
     }
 
-    const slug = t.transaction.oppositeAccount?.slug || ''
+    const slug = oppositeAccount.slug || ''
     const amount = -(t.transaction.amountInHostCurrency?.valueInCents || 0)
-    const key = `${name}-${t.color}`
+    const key = `${id}-${t.color}`
     if (!sourcesMap[key]) {
-      sourcesMap[key] = { color: t.color, name, slug, total: 0 }
+      sourcesMap[key] = { key, color: t.color, name, slug, total: 0 }
     }
     sourcesMap[key].total += amount
   })
@@ -73,7 +78,7 @@ const topSources = computed(() => {
     </h4>
     <table class="w-full gap-2">
       <tbody>
-        <tr v-for="source in topSources" :key="source.name">
+        <tr v-for="source in topSources" :key="source.key">
           <td class="p-0 pr-1 pb-1">
             <a
               :href="`https://opencollective.com/${source.slug}`"

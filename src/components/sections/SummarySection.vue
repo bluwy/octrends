@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { CollectiveData, Transaction } from '../utils/types'
+import type { CollectiveData, Transaction } from '../../utils/types'
 import { chartCurrencyFormatter, getChartLegendColor } from '../../utils/common'
 
 const props = defineProps<{
@@ -11,6 +11,13 @@ const props = defineProps<{
 
 function formatCurrency(amount: number) {
   return chartCurrencyFormatter.format(amount / 100)
+}
+
+function formatPercentage(percentage: number) {
+  let v = percentage.toFixed()
+  if (v === '0') v = percentage.toFixed(1)
+  if (v === '0.0') v = percentage.toFixed(2)
+  return `${v}%`
 }
 
 function getMonthDiff(start: Date, end: Date) {
@@ -55,10 +62,22 @@ const summaries = computed(() => {
       name: d.name,
       totalIncome,
       averageBudget,
-      totalExpense,
-      expenseToUsers,
-      expenseToCollectives,
-      expenseByMiscFees,
+      totalExpense: {
+        value: totalExpense,
+        percentage: (totalExpense / totalIncome) * 100,
+      },
+      expenseToUsers: {
+        value: expenseToUsers,
+        percentage: (expenseToUsers / totalIncome) * 100,
+      },
+      expenseToCollectives: {
+        value: expenseToCollectives,
+        percentage: (expenseToCollectives / totalIncome) * 100,
+      },
+      expenseByMiscFees: {
+        value: expenseByMiscFees,
+        percentage: (expenseByMiscFees / totalIncome) * 100,
+      },
     }
   })
 })
@@ -69,14 +88,27 @@ const summaries = computed(() => {
     <h3 class="text-xl font-400 m-0">In this period...</h3>
     <p v-for="(s, i) in summaries" :key="s.name" class="text-lg mb-4 text-gray-300">
       <strong :style="{ color: getChartLegendColor(i) }">{{ s.name }}</strong> has raised
-      <strong class="text-green-200">{{ formatCurrency(s.totalIncome) }}</strong> with an average
-      monthly budget of <strong class="text-green-200">{{ formatCurrency(s.averageBudget) }}</strong
-      >. A total of <strong class="text-red-200">{{ formatCurrency(s.totalExpense) }}</strong> is
-      disbursed to users,
-      <strong class="text-red-200">{{ formatCurrency(s.expenseToCollectives) }}</strong> is
-      disbursed to other collectives, and
-      <strong class="text-red-200">{{ formatCurrency(s.expenseByMiscFees) }}</strong> is spent on
-      host and payment processor fees.
+      <strong class="text-green-200">{{ formatCurrency(s.totalIncome) }}</strong> (average
+      <strong class="text-green-200">{{ formatCurrency(s.averageBudget) }}</strong> per month). A
+      total of
+      <strong class="text-red-200"
+        >{{ formatCurrency(s.totalExpense.value) }} ({{
+          formatPercentage(s.totalExpense.percentage)
+        }})</strong
+      >
+      is disbursed to users,
+      <strong class="text-red-200"
+        >{{ formatCurrency(s.expenseToCollectives.value) }} ({{
+          formatPercentage(s.expenseToCollectives.percentage)
+        }})</strong
+      >
+      is disbursed to other collectives, and
+      <strong class="text-red-200"
+        >{{ formatCurrency(s.expenseByMiscFees.value) }} ({{
+          formatPercentage(s.expenseByMiscFees.percentage)
+        }})</strong
+      >
+      is spent on host and payment processor fees.
     </p>
   </div>
 </template>

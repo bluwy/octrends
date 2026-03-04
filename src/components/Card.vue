@@ -28,7 +28,7 @@ function getSocialIconClass(type: string) {
 
 <template>
   <div
-    class="flex flex-col bg-gray-500 bg-opacity-10 rounded-md border-gray-700 border-solid w-72 p-2"
+    class="flex flex-col bg-gray-500 bg-opacity-10 rounded-md border-1 border-gray-700 border-solid w-72 p-2"
   >
     <div class="flex-grow">
       <div class="flex items-center gap-2">

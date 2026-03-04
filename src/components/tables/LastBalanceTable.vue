@@ -14,7 +14,9 @@ const lastBalances = computed(() => {
     for (let i = collective.transactions.length - 1; i >= 0; i--) {
       const tx = collective.transactions[i]!
       if (new Date(tx.createdAt) <= props.latestDate) {
-        balance = tx.balanceInHostCurrency?.valueInCents ?? 0
+        const value = tx.balanceInHostCurrency?.valueInCents
+        if (value == null) continue
+        balance = value
         break
       }
     }
