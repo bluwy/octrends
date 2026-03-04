@@ -14,6 +14,7 @@ function formatCurrency(amount: number) {
 }
 
 function formatPercentage(percentage: number) {
+  if (percentage === 0) return '0%'
   let v = percentage.toFixed()
   if (v === '0') v = percentage.toFixed(1)
   if (v === '0.0') v = percentage.toFixed(2)
@@ -42,7 +43,8 @@ const summaries = computed(() => {
       0,
     )
     // Expense breakdown
-    let expenseToUsers = 0,
+    let expenseToMaintainers = 0,
+      expenseToUsers = 0,
       expenseToCollectives = 0,
       expenseByMiscFees = 0
     for (const tx of expenses) {
@@ -52,7 +54,15 @@ const summaries = computed(() => {
       } else if (tx.oppositeAccount?.type === 'COLLECTIVE') {
         expenseToCollectives += amount
       } else {
-        expenseToUsers += amount
+        const expenseAccountId = tx.oppositeAccount?.id
+        const isMaintainer =
+          expenseAccountId &&
+          d.account.members.nodes?.some((m) => m?.account?.id === expenseAccountId)
+        if (isMaintainer) {
+          expenseToMaintainers += amount
+        } else {
+          expenseToUsers += amount
+        }
       }
     }
     // Average monthly budget
@@ -65,6 +75,10 @@ const summaries = computed(() => {
       totalExpense: {
         value: totalExpense,
         percentage: (totalExpense / totalIncome) * 100,
+      },
+      expenseToMaintainers: {
+        value: expenseToMaintainers,
+        percentage: (expenseToMaintainers / totalIncome) * 100,
       },
       expenseToUsers: {
         value: expenseToUsers,
@@ -86,30 +100,54 @@ const summaries = computed(() => {
 <template>
   <div class="mt-8 mb-16">
     <h3 class="text-xl font-400 m-0">In this period...</h3>
-    <p v-for="(s, i) in summaries" :key="s.name" class="text-lg mb-4 text-gray-300">
-      <strong :style="{ color: getChartLegendColor(i) }">{{ s.name }}</strong> has raised
-      <strong class="text-green-200">{{ formatCurrency(s.totalIncome) }}</strong> (average
-      <strong class="text-green-200">{{ formatCurrency(s.averageBudget) }}</strong> per month). A
-      total of
-      <strong class="text-red-200"
-        >{{ formatCurrency(s.totalExpense.value) }} ({{
-          formatPercentage(s.totalExpense.percentage)
-        }})</strong
-      >
-      is disbursed to users,
-      <strong class="text-red-200"
-        >{{ formatCurrency(s.expenseToCollectives.value) }} ({{
-          formatPercentage(s.expenseToCollectives.percentage)
-        }})</strong
-      >
-      is disbursed to other collectives, and
-      <strong class="text-red-200"
-        >{{ formatCurrency(s.expenseByMiscFees.value) }} ({{
-          formatPercentage(s.expenseByMiscFees.percentage)
-        }})</strong
-      >
-      is spent on host and payment processor fees.
-    </p>
+    <template v-for="(s, i) in summaries" :key="s.name">
+      <p class="text-lg mb-2 text-gray-300">
+        <strong :style="{ color: getChartLegendColor(i) }">{{ s.name }}</strong> has raised
+        <strong class="text-green-200">{{ formatCurrency(s.totalIncome) }}</strong> (average
+        <strong class="text-green-200">{{ formatCurrency(s.averageBudget) }}</strong> per month). It
+        has disbursed
+        <strong class="text-red-200"
+          >{{ formatCurrency(s.totalExpense.value) }} ({{
+            formatPercentage(s.totalExpense.percentage)
+          }})</strong
+        >
+        which consists of
+      </p>
+      <ul class="mt-2">
+        <li>
+          <strong class="text-red-200"
+            >{{ formatCurrency(s.expenseToMaintainers.value) }} ({{
+              formatPercentage(s.expenseToMaintainers.percentage)
+            }})</strong
+          >
+          to maintainers
+        </li>
+        <li>
+          <strong class="text-red-200"
+            >{{ formatCurrency(s.expenseToUsers.value) }} ({{
+              formatPercentage(s.expenseToUsers.percentage)
+            }})</strong
+          >
+          to users
+        </li>
+        <li>
+          <strong class="text-red-200"
+            >{{ formatCurrency(s.expenseToCollectives.value) }} ({{
+              formatPercentage(s.expenseToCollectives.percentage)
+            }})</strong
+          >
+          to other collectives
+        </li>
+        <li>
+          <strong class="text-red-200"
+            >{{ formatCurrency(s.expenseByMiscFees.value) }} ({{
+              formatPercentage(s.expenseByMiscFees.percentage)
+            }})</strong
+          >
+          on host and payment processor fees
+        </li>
+      </ul>
+    </template>
   </div>
 </template>
 

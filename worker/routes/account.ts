@@ -22,6 +22,21 @@ const query = /* GraphQL */ `
       }
       imageUrl
       createdAt
+      members(role: [ADMIN, MEMBER], accountType: INDIVIDUAL) {
+        totalCount
+        nodes {
+          id
+          role
+          createdAt
+          updatedAt
+          since
+          account {
+            id
+            slug
+            name
+          }
+        }
+      }
     }
   }
 `
