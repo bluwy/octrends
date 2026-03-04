@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import MonthlyIncomeChart from '../charts/MonthlyIncomeChart.vue'
 import type { CollectiveData } from '../../utils/types'
+import TopIncomeSourcesTable from '../tables/TopIncomeSourcesTable.vue'
 
 const props = defineProps<{
   data: CollectiveData[]
@@ -21,7 +22,11 @@ const props = defineProps<{
         />
       </div>
       <div class="flex-1">
-        <!-- Reserved for future: Last balances or summary -->
+        <TopIncomeSourcesTable
+          :data="props.data"
+          :earliestDate="props.earliestDate"
+          :latestDate="props.latestDate"
+        />
       </div>
     </div>
   </div>

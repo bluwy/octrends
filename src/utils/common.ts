@@ -26,7 +26,7 @@ export const dateOnlyFormatter = new Intl.DateTimeFormat(undefined, {
 
 export const chartLegendColors = colorsDark
 export function getChartLegendColor(index: number) {
-  return chartLegendColors[index % chartLegendColors.length]
+  return chartLegendColors[index % chartLegendColors.length] as string
 }
 
 export function debounce(fn: Function, wait: number) {
