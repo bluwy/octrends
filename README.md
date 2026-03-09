@@ -1,5 +1,7 @@
 # Open Collective Trends
 
+https://octrends.bjornlu.com
+
 Analyze and compare funding between collectives on [Open Collective](https://opencollective.com).
 
 NOTE:
