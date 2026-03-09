@@ -13,6 +13,7 @@
     "graphql:codegen": "graphql-codegen --config graphql-codegen.ts",
     "format": "prettier --write \"**/*.{ts,css,vue}\""
   },
+  "packageManager": "pnpm@10.30.3",
   "dependencies": {
     "@unovis/ts": "^1.6.4",
     "@unovis/vue": "^1.6.4",
