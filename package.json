@@ -11,7 +11,8 @@
     "worker:deploy": "wrangler deploy --env production",
     "worker:typegen": "wrangler types worker/worker-configuration.d.ts",
     "graphql:codegen": "graphql-codegen --config graphql-codegen.ts",
-    "format": "prettier --write \"**/*.{ts,css,vue}\""
+    "format": "prettier --write \"**/*.{ts,css,vue}\"",
+    "typecheck": "vue-tsc -b --noEmit"
   },
   "packageManager": "pnpm@10.30.3",
   "dependencies": {
