@@ -12,8 +12,17 @@ import { getChartLegendColor } from './utils/common'
 import { endOfToday, getEarliestDate } from './utils/date'
 import type { CollectiveData } from './utils/types'
 import { suggestedCollectives } from './utils/constants'
+import { useUrl } from './utils/useUrl'
 
-const selectedOrgs = ref<string[]>([])
+const url = useUrl()
+
+// "/org1-vs-org2" => ["org1", "org2"]
+const selectedOrgs = computed<string[]>(() => {
+  const path = url.value.pathname.replace(/^\//, '')
+  if (!path) return []
+  return path.split('-vs-').filter(Boolean)
+})
+
 const data = ref<CollectiveData[]>([])
 
 const dateRange = ref<[Date, Date]>()
@@ -39,12 +48,13 @@ const vsColoredHtml = computed(() => {
 // Get two random collectives as suggestions
 const randomSuggestedCollectives = suggestedCollectives.sort(() => 0.5 - Math.random()).slice(0, 2)
 
-watch([selectedOrgs], fetchData, { immediate: true, deep: true })
+watch([selectedOrgs], fetchData, { immediate: true })
 async function fetchData() {
+  const orgs = selectedOrgs.value
   const newData: CollectiveData[] = []
 
   await Promise.all(
-    selectedOrgs.value.map(async (org) => {
+    orgs.map(async (org) => {
       try {
         // Both endpoints have different cache duration, so separated
         const [accountRes, transactionsRes] = await Promise.all([
@@ -65,7 +75,7 @@ async function fetchData() {
   )
 
   data.value = newData.sort((a, b) => {
-    return selectedOrgs.value.indexOf(a.name) - selectedOrgs.value.indexOf(b.name)
+    return orgs.indexOf(a.name) - orgs.indexOf(b.name)
   })
 }
 
@@ -75,6 +85,26 @@ watch([earliestDate], () => {
     dateRange.value = [earliestDate.value, endOfToday]
   }
 })
+
+function setOrgs(orgs: string[]) {
+  const path = orgs.length ? '/' + orgs.join('-vs-') : '/'
+  if (window.location.pathname !== path) {
+    window.history.pushState({}, '', path)
+  }
+}
+
+function addOrg(org: string) {
+  const orgs = selectedOrgs.value.slice()
+  if (!orgs.includes(org)) {
+    orgs.push(org)
+    setOrgs(orgs)
+  }
+}
+
+function removeOrg(org: string) {
+  const orgs = selectedOrgs.value.filter((o) => o !== org)
+  setOrgs(orgs)
+}
 </script>
 
 <template>
@@ -92,7 +122,7 @@ watch([earliestDate], () => {
       </div>
       <p class="opacity-60 mt-4 mb-2">Analyze and compare collective fundings</p>
       <div class="flex items-center gap-4">
-        <SearchInput @submit="(value) => selectedOrgs.push(value)" />
+        <SearchInput @submit="(v) => addOrg(v)" />
         <p v-show="selectedOrgs.length !== data.length" class="m-0 opacity-60 text-sm italic">
           Loading collective data
           <span class="inline-block align-bottom i-svg-spinners:3-dots-fade"></span>
@@ -103,7 +133,7 @@ watch([earliestDate], () => {
           v-for="d in data"
           :key="d.name"
           :account="d.account"
-          @close="selectedOrgs.splice(selectedOrgs.indexOf(d.name), 1)"
+          @close="() => removeOrg(d.name)"
         />
       </div>
       <hr v-if="data.length > 0" class="fade-lines border-white my-8" />
@@ -112,7 +142,7 @@ watch([earliestDate], () => {
         <template v-for="(c, i) in randomSuggestedCollectives" :key="c">
           <button
             class="bg-transparent border-none p-0 m-0 font-size-inherit text-inherit underline cursor-pointer hover:underline focus:underline"
-            @click="selectedOrgs.push(c)"
+            @click="() => addOrg(c)"
           >
             {{ c }}
           </button>
