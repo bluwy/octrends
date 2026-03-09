@@ -10,6 +10,6 @@ export default {
       const response = await route.handler(request, env, ctx)
       if (response) return response
     }
-    return new Response('Not Found', { status: 404 })
+    return env.ASSETS.fetch(request)
   },
 } satisfies ExportedHandler<Env>
