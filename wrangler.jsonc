@@ -21,6 +21,12 @@
   ],
   "env": {
     "production": {
+      "kv_namespaces": [
+        {
+          "binding": "OPEN_COLLECTIVE_TRANSACTIONS",
+          "id": "56471e1b160749c8a396d1f2f140a7d7",
+        },
+      ],
       "assets": {
         "directory": "./dist",
         "binding": "ASSETS",
