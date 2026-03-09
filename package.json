@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "worker:dev": "wrangler dev",
-    "worker:deploy": "wrangler deploy",
+    "worker:deploy": "wrangler deploy --env production",
     "worker:typegen": "wrangler types worker/worker-configuration.d.ts",
     "graphql:codegen": "graphql-codegen --config graphql-codegen.ts",
     "format": "prettier --write \"**/*.{ts,css,vue}\""

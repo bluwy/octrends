@@ -6,5 +6,8 @@ export const userAgentHeader = {
 
 export function getOpenCollectiveTokenHeader(env: Env): Record<string, string> {
   const token = env.OPEN_COLLECTIVE_TOKEN
+  if (!env.DEV && !token) {
+    throw new Error('OPEN_COLLECTIVE_TOKEN is required in production')
+  }
   return token ? { 'Personal-Token': token } : {}
 }
