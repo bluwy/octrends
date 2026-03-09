@@ -16,6 +16,8 @@ import { useUrl } from './utils/useUrl'
 
 const url = useUrl()
 
+const hasPathnameInitially = url.value.pathname.length > 1
+
 // "/org1-vs-org2" => ["org1", "org2"]
 const selectedOrgs = computed<string[]>(() => {
   const path = url.value.pathname.replace(/^\//, '')
@@ -120,7 +122,7 @@ function removeOrg(org: string) {
           <img :src="githubIcon" alt="GitHub" class="w-5 h-5" />
         </a>
       </div>
-      <p class="opacity-60 mt-4 mb-2">Analyze and compare collective fundings</p>
+      <p class="opacity-60 mt-4 mb-2">Analyze and compare collective funding</p>
       <div class="flex items-center gap-4">
         <SearchInput @submit="(v) => addOrg(v)" />
         <p v-show="selectedOrgs.length !== data.length" class="m-0 opacity-60 text-sm italic">
@@ -137,7 +139,7 @@ function removeOrg(org: string) {
         />
       </div>
       <hr v-if="data.length > 0" class="fade-lines border-white my-8" />
-      <p v-else class="my-6">
+      <p v-else-if="!hasPathnameInitially" class="my-6">
         Add a collective to get started. For example,
         <template v-for="(c, i) in randomSuggestedCollectives" :key="c">
           <button
