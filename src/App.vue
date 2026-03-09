@@ -11,9 +11,9 @@ import githubIcon from './assets/github.svg'
 import { getChartLegendColor } from './utils/common'
 import { endOfToday, getEarliestDate } from './utils/date'
 import type { CollectiveData } from './utils/types'
+import { suggestedCollectives } from './utils/constants'
 
-// Example orgs, can be dynamic or fetched
-const selectedOrgs = ref<string[]>(['e18e', 'vitest'])
+const selectedOrgs = ref<string[]>([])
 const data = ref<CollectiveData[]>([])
 
 const dateRange = ref<[Date, Date]>()
@@ -35,6 +35,9 @@ const vsColoredHtml = computed(() => {
   }
   return str
 })
+
+// Get two random collectives as suggestions
+const randomSuggestedCollectives = suggestedCollectives.sort(() => 0.5 - Math.random()).slice(0, 2)
 
 watch([selectedOrgs], fetchData, { immediate: true, deep: true })
 async function fetchData() {
@@ -88,8 +91,14 @@ watch([earliestDate], () => {
         </a>
       </div>
       <p class="opacity-60 mt-4 mb-2">Analyze and compare collective fundings</p>
-      <SearchInput @submit="(value) => selectedOrgs.push(value)" />
-      <div class="flex flex-wrap gap-4 mt-6 mb-4">
+      <div class="flex items-center gap-4">
+        <SearchInput @submit="(value) => selectedOrgs.push(value)" />
+        <p v-show="selectedOrgs.length !== data.length" class="m-0 opacity-60 text-sm italic">
+          Loading collective data
+          <span class="inline-block align-bottom i-svg-spinners:3-dots-fade"></span>
+        </p>
+      </div>
+      <div v-show="data.length > 0" class="flex flex-wrap gap-4 mt-6 mb-4">
         <Card
           v-for="d in data"
           :key="d.name"
@@ -97,7 +106,19 @@ watch([earliestDate], () => {
           @close="selectedOrgs.splice(selectedOrgs.indexOf(d.name), 1)"
         />
       </div>
-      <hr class="fade-lines border-white my-8" />
+      <hr v-if="data.length > 0" class="fade-lines border-white my-8" />
+      <p v-else class="my-6">
+        Add a collective to get started. For example,
+        <template v-for="(c, i) in randomSuggestedCollectives" :key="c">
+          <button
+            class="bg-transparent border-none p-0 m-0 font-size-inherit text-inherit underline cursor-pointer hover:underline focus:underline"
+            @click="selectedOrgs.push(c)"
+          >
+            {{ c }}
+          </button>
+          <span v-if="i < randomSuggestedCollectives.length - 1"> or </span></template
+        >.
+      </p>
     </section>
     <section
       v-if="data.length > 0 && earliestDate && selectedEarliestDate && selectedLatestDate"

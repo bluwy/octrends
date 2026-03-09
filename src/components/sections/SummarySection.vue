@@ -113,7 +113,7 @@ const summaries = computed(() => {
         >
         which consists of
       </p>
-      <ul class="mt-2">
+      <ul class="mt-2 text-gray-300">
         <li>
           <strong class="text-red-200"
             >{{ formatCurrency(s.expenseToMaintainers.value) }} ({{
