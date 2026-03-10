@@ -106,7 +106,7 @@ export const handler: RouteHandler = async (request, env, ctx) => {
 
 function isAccountNotFound(errors: any): boolean {
   try {
-    return errors[0].extensions.code === 'NotFound'
+    return errors[0].message.includes('No collective found')
   } catch {}
   return false
 }

@@ -10,7 +10,7 @@ import Card from './components/Card.vue'
 import LoadingText from './components/LoadingText.vue'
 import githubIcon from './assets/github.svg'
 import { getChartLegendColor } from './utils/common'
-import { fetchCollectivesData } from './utils/data'
+import { fetchCollectiveData } from './utils/data'
 import { endOfToday, getEarliestDate } from './utils/date'
 import type { CollectiveData } from './utils/types'
 import { suggestedCollectives } from './utils/constants'
@@ -28,6 +28,8 @@ const selectedOrgs = computed<string[]>(() => {
 })
 
 const data = ref<CollectiveData[]>([])
+const fetchDataState = ref<'idle' | 'fetching' | 'error'>('idle')
+const failedOrgs = ref<string[]>([])
 
 const dateRange = ref<[Date, Date]>()
 const earliestDate = computed(() => getEarliestDate(data.value))
@@ -55,7 +57,24 @@ const randomSuggestedCollectives = suggestedCollectives.sort(() => 0.5 - Math.ra
 watch(
   [selectedOrgs],
   async () => {
-    data.value = await fetchCollectivesData(selectedOrgs.value)
+    fetchDataState.value = 'fetching'
+    const orgs = selectedOrgs.value
+    try {
+      data.value = await Promise.all(
+        orgs.map(async (org) => {
+          try {
+            return await fetchCollectiveData(org)
+          } catch (e) {
+            failedOrgs.value.push(org)
+            throw new Error(`Error fetching data for ${org}`, { cause: e })
+          }
+        }),
+      )
+      fetchDataState.value = 'idle'
+    } catch (error) {
+      fetchDataState.value = 'error'
+      console.log('Error fetching data:', error)
+    }
   },
   { immediate: true },
 )
@@ -68,6 +87,7 @@ watch([earliestDate], () => {
 })
 
 function setOrgs(orgs: string[]) {
+  orgs = orgs.filter((o) => !failedOrgs.value.includes(o))
   const path = orgs.length ? '/' + orgs.join('-vs-') : '/'
   if (window.location.pathname !== path) {
     window.history.pushState({}, '', path)
@@ -104,7 +124,10 @@ function removeOrg(org: string) {
       <p class="opacity-60 mt-4 mb-2">Analyze and compare collective funding</p>
       <div class="flex items-center gap-4">
         <SearchInput @submit="(v) => addOrg(v)" />
-        <LoadingText v-if="selectedOrgs.length !== data.length" />
+        <LoadingText v-if="fetchDataState === 'fetching'" />
+        <span class="m-0 text-red-400 text-sm italic" v-else-if="fetchDataState === 'error'">
+          Failed to fetch data. Is the collective slug correct?
+        </span>
       </div>
       <div v-show="data.length > 0" class="flex flex-wrap gap-4 mt-6 mb-4">
         <Card

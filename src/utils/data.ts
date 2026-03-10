@@ -1,18 +1,6 @@
 import type { CollectiveData } from './types'
 
-export async function fetchCollectivesData(orgs: string[]): Promise<CollectiveData[]> {
-  return await Promise.all(
-    orgs.map(async (org) => {
-      try {
-        return await fetchCollectiveData(org)
-      } catch (e) {
-        throw new Error(`Error fetching data for ${org}`, { cause: e })
-      }
-    }),
-  )
-}
-
-async function fetchCollectiveData(org: string): Promise<CollectiveData> {
+export async function fetchCollectiveData(org: string): Promise<CollectiveData> {
   const [account, transactions] = await Promise.all([
     // Both endpoints have different cache duration, so separated
     fetchAccount(org),
