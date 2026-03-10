@@ -9,6 +9,7 @@ import SearchInput from './components/SearchInput.vue'
 import Card from './components/Card.vue'
 import githubIcon from './assets/github.svg'
 import { getChartLegendColor } from './utils/common'
+import { fetchCollectivesData } from './utils/data'
 import { endOfToday, getEarliestDate } from './utils/date'
 import type { CollectiveData } from './utils/types'
 import { suggestedCollectives } from './utils/constants'
@@ -50,36 +51,13 @@ const vsColoredHtml = computed(() => {
 // Get two random collectives as suggestions
 const randomSuggestedCollectives = suggestedCollectives.sort(() => 0.5 - Math.random()).slice(0, 2)
 
-watch([selectedOrgs], fetchData, { immediate: true })
-async function fetchData() {
-  const orgs = selectedOrgs.value
-  const newData: CollectiveData[] = []
-
-  await Promise.all(
-    orgs.map(async (org) => {
-      try {
-        // Both endpoints have different cache duration, so separated
-        const [accountRes, transactionsRes] = await Promise.all([
-          fetch(`/api/account/${org}`),
-          fetch(`/api/transactions/${org}`),
-        ])
-        const accountResult = await accountRes.json()
-        const transactionsResult = await transactionsRes.json()
-        newData.push({
-          name: org,
-          account: accountResult.account,
-          transactions: transactionsResult.transactions,
-        })
-      } catch (e) {
-        console.error(`Error fetching data for ${org}:`, e)
-      }
-    }),
-  )
-
-  data.value = newData.sort((a, b) => {
-    return orgs.indexOf(a.name) - orgs.indexOf(b.name)
-  })
-}
+watch(
+  [selectedOrgs],
+  async () => {
+    data.value = await fetchCollectivesData(selectedOrgs.value)
+  },
+  { immediate: true },
+)
 
 // Set default date range when earliest or latest date changes
 watch([earliestDate], () => {

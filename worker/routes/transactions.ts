@@ -10,6 +10,7 @@ const updateIntervalMs = 1 * 60 * 60 * 1000 // 1 hour
 const responseTtl = 30 * 60 // 30 minutes (seconds)
 const maxKvSize = 26_214_000 // 26214400 bytes (26MiB) minus some bytes for leeway.
 const maxTotalTransactions = 100_000 // Skip collectives that has excessive transactions for now (See NOTES.md)
+const maxFetchCount = 10 // To prevent the worker from running too long and timing out
 const textEncoder = new TextEncoder()
 const textDecoder = new TextDecoder()
 // Bump this if the query data changes so we invalidate the cache and refetch all the transactions again
@@ -136,12 +137,13 @@ export const handler: RouteHandler = async (request, env, ctx) => {
 
   const currentDate = new Date()
   const lastCreatedAt = transactions ? transactions[transactions.length - 1]?.createdAt : undefined
-  const newTransactions = await fetchTransactions(slug, lastCreatedAt, env)
+  const fetchedTransactions = await fetchTransactions(slug, lastCreatedAt, env)
 
-  if (newTransactions instanceof Response) {
-    return newTransactions
+  if (fetchedTransactions instanceof Response) {
+    return fetchedTransactions
   }
 
+  const { transactions: newTransactions, exceededMaxFetchCount } = fetchedTransactions
   if (transactions) {
     transactions.push(...newTransactions)
   } else {
@@ -153,6 +155,24 @@ export const handler: RouteHandler = async (request, env, ctx) => {
     console.log(
       `Returned ${newTransactions.length} new transactions for "${slug}". Total is now ${transactions.length} transactions.`,
     )
+
+  if (exceededMaxFetchCount) {
+    await kvPutWithChunks(
+      env.OPEN_COLLECTIVE_TRANSACTIONS,
+      slug,
+      result,
+      {
+        version: queryVersion,
+        // Set 0 date so it triggers an update on the next request
+        lastUpdated: new Date(0).toISOString(),
+      },
+      env,
+    )
+    // Client should re-request to trigger subsequent fetches until all transactions are fetched
+    return new Response('Data incomplete, please re-request to fetch remaining transactions', {
+      status: 206,
+    })
+  }
 
   ctx.waitUntil(
     kvPutWithChunks(
@@ -183,15 +203,19 @@ async function fetchTransactions(
   slug: string,
   after: string | undefined,
   env: Env,
-): Promise<Response | Transaction[]> {
+): Promise<Response | { transactions: Transaction[]; exceededMaxFetchCount: boolean }> {
   const transactions: Transaction[] = []
   const limit = 1000 // OC max limit is 1000
   let offset = 0
+  let fetchCount = 0
 
   // Increment after by 1ms because OC's API is inclusive for some reason
   after = after ? new Date(new Date(after).getTime() + 1).toISOString() : undefined
 
-  do {
+  while (true) {
+    fetchCount++
+    if (fetchCount > maxFetchCount) break
+
     const response = await fetch(openCollectiveGraphQLEndpoint, {
       method: 'POST',
       headers: {
@@ -244,9 +268,9 @@ async function fetchTransactions(
     // Iterate the next page
     offset += nodes.length
     if (offset >= totalCount) break
-  } while (true)
+  }
 
-  return transactions
+  return { transactions, exceededMaxFetchCount: fetchCount >= maxFetchCount }
 }
 
 function isAccountNotFound(errors: any): boolean {
