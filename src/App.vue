@@ -7,6 +7,7 @@ import ExpenseSection from './components/sections/ExpenseSection.vue'
 import DateRangePicker from './components/DateRangePicker.vue'
 import SearchInput from './components/SearchInput.vue'
 import Card from './components/Card.vue'
+import LoadingText from './components/LoadingText.vue'
 import githubIcon from './assets/github.svg'
 import { getChartLegendColor } from './utils/common'
 import { fetchCollectivesData } from './utils/data'
@@ -103,10 +104,7 @@ function removeOrg(org: string) {
       <p class="opacity-60 mt-4 mb-2">Analyze and compare collective funding</p>
       <div class="flex items-center gap-4">
         <SearchInput @submit="(v) => addOrg(v)" />
-        <p v-show="selectedOrgs.length !== data.length" class="m-0 opacity-60 text-sm italic">
-          Loading collective data
-          <span class="inline-block align-bottom i-svg-spinners:3-dots-fade"></span>
-        </p>
+        <LoadingText v-if="selectedOrgs.length !== data.length" />
       </div>
       <div v-show="data.length > 0" class="flex flex-wrap gap-4 mt-6 mb-4">
         <Card
