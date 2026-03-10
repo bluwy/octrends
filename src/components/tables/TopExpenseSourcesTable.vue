@@ -30,7 +30,7 @@ const filteredExpenses = computed(() => {
         new Date(transaction.createdAt) >= props.earliestDate &&
         new Date(transaction.createdAt) <= props.latestDate
       ) {
-        expenses.push({ color: getChartLegendColor(i), transaction })
+        expenses.push({ color: getChartLegendColor(i), collective, transaction })
       }
     }
   }
@@ -60,6 +60,10 @@ const topSources = computed(() => {
     }
 
     const slug = oppositeAccount.slug || ''
+    if (slug && t.collective.account.members.nodes?.some((m) => m?.account?.slug === slug)) {
+      name += ' (Maintainer)'
+    }
+
     const amount = -(t.transaction.amountInHostCurrency?.valueInCents || 0)
     const key = `${id}-${t.color}`
     if (!sourcesMap[key]) {
