@@ -7,7 +7,7 @@ import {
 } from '../utils.ts'
 
 const updateIntervalMs = 1 * 60 * 60 * 1000 // 1 hour
-const responseTtl = 30 * 60 // 30 minutes
+const responseTtl = 30 * 60 // 30 minutes (seconds)
 const maxKvSize = 26_214_000 // 26214400 bytes (26MiB) minus some bytes for leeway.
 const textEncoder = new TextEncoder()
 const textDecoder = new TextDecoder()
