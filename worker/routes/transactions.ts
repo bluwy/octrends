@@ -110,7 +110,7 @@ export const handler: RouteHandler = async (request, env, ctx) => {
   const slug = match[1]
 
   const cached = await kvGetWithChunks(env.OPEN_COLLECTIVE_TRANSACTIONS, slug, env)
-  let transactions: Transaction[] | undefined
+  let transactionsStr: string | undefined
   if (cached.value && cached.metadata?.version === queryVersion && cached.metadata?.lastUpdated) {
     const lastUpdated = cached.metadata.lastUpdated
     const age = Date.now() - new Date(lastUpdated).getTime()
@@ -132,11 +132,11 @@ export const handler: RouteHandler = async (request, env, ctx) => {
     }
 
     if (env.DEV) console.log(`Cache for "${slug}" is outdated, refetching...`)
-    transactions = JSON.parse(cached.value).transactions
+    transactionsStr = cached.value
   }
 
   const currentDate = new Date()
-  const lastCreatedAt = transactions ? transactions[transactions.length - 1]?.createdAt : undefined
+  const lastCreatedAt = transactionsStr ? getLastCreatedAt(transactionsStr) : undefined
   const fetchedTransactions = await fetchTransactions(slug, lastCreatedAt, env)
 
   if (fetchedTransactions instanceof Response) {
@@ -144,16 +144,13 @@ export const handler: RouteHandler = async (request, env, ctx) => {
   }
 
   const { transactions: newTransactions, exceededMaxFetchCount } = fetchedTransactions
-  if (transactions) {
-    transactions.push(...newTransactions)
-  } else {
-    transactions = newTransactions
-  }
-  const result = JSON.stringify({ transactions })
+  const result = transactionsStr
+    ? appendTransactions(transactionsStr, newTransactions)
+    : JSON.stringify({ transactions: newTransactions })
 
   if (env.DEV)
     console.log(
-      `Returned ${newTransactions.length} new transactions for "${slug}". Total is now ${transactions.length} transactions.`,
+      `Returned ${newTransactions.length} new transactions for "${slug}". Total is now ${JSON.parse(result).transactions.length} transactions.`,
     )
 
   if (exceededMaxFetchCount) {
@@ -271,6 +268,25 @@ async function fetchTransactions(
   }
 
   return { transactions, exceededMaxFetchCount: fetchCount >= maxFetchCount }
+}
+
+function getLastCreatedAt(transactionsStr: string): string | undefined {
+  const lastIndex = transactionsStr.lastIndexOf('"createdAt":"')
+  if (lastIndex === -1) return undefined
+  const startIndex = lastIndex + '"createdAt":"'.length
+  const endIndex = transactionsStr.indexOf('"', startIndex)
+  if (endIndex === -1) return undefined
+  return transactionsStr.slice(startIndex, endIndex)
+}
+
+function appendTransactions(transactionsStr: string, newTransactions: Transaction[]): string {
+  if (newTransactions.length === 0) {
+    return transactionsStr
+  }
+  const before = transactionsStr.slice(0, -2) // `]}`
+  const newTransactionsStr = JSON.stringify(newTransactions).slice(1, -1) // remove the surrounding []
+  const delim = before[before.length - 1] === '[' ? '' : ','
+  return `${before}${delim}${newTransactionsStr}]}`
 }
 
 function isAccountNotFound(errors: any): boolean {
