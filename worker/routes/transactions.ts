@@ -9,6 +9,7 @@ import {
 const updateIntervalMs = 1 * 60 * 60 * 1000 // 1 hour
 const responseTtl = 30 * 60 // 30 minutes (seconds)
 const maxKvSize = 26_214_000 // 26214400 bytes (26MiB) minus some bytes for leeway.
+const maxTotalTransactions = 100_000 // Skip collectives that has excessive transactions for now (See NOTES.md)
 const textEncoder = new TextEncoder()
 const textDecoder = new TextDecoder()
 // Bump this if the query data changes so we invalidate the cache and refetch all the transactions again
@@ -224,6 +225,10 @@ async function fetchTransactions(
     if (nodes == null) break
     const totalCount = result.data.transactions.totalCount
     if (totalCount == null) break
+
+    if (totalCount > maxTotalTransactions) {
+      return new Response(`Collective "${slug}" has too many transactions`, { status: 400 })
+    }
 
     if (env.DEV)
       console.log(
