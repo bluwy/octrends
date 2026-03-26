@@ -20,6 +20,10 @@ function getSocialIconClass(type: string) {
       return 'i-simple-icons:mastodon'
     case 'BLUESKY':
       return 'i-simple-icons:bluesky'
+    case 'LINKEDIN':
+      return 'i-simple-icons:linkedin'
+    case 'YOUTUBE':
+      return 'i-simple-icons:youtube'
     default:
       return 'i-heroicons:link-solid'
   }
