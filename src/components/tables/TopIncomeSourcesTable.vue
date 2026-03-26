@@ -42,18 +42,19 @@ const rowCount = ref(10)
 const topSources = computed(() => {
   const sourcesMap: Record<
     string,
-    { key: string; color: string; name: string; slug: string; total: number }
+    { key: string; color: string; name: string; slug?: string; total: number }
   > = {}
   filteredIncome.value.forEach((t) => {
     const oppositeAccount = t.transaction.oppositeAccount
     if (oppositeAccount == null) return
 
     const id = oppositeAccount.id
-    let name = oppositeAccount.name || 'Unknown'
-    const slug = oppositeAccount.slug
     const amount = t.transaction.amountInHostCurrency?.valueInCents || 0
     const key = `${id}-${t.color}`
     if (!sourcesMap[key]) {
+      const name = oppositeAccount.name || 'Unknown'
+      // VENDOR no slug: 11004-sovereign-tech-fund-2532c0cc
+      const slug = oppositeAccount.type === 'VENDOR' ? undefined : oppositeAccount.slug
       sourcesMap[key] = { key, color: t.color, name, slug, total: 0 }
     }
     sourcesMap[key].total += amount
@@ -81,6 +82,7 @@ const topSourcesList = computed(() => {
         <tr v-for="source in topSourcesList" :key="source.name">
           <td class="p-0 pr-1 pb-1">
             <a
+              v-if="source.slug"
               :href="`https://opencollective.com/${source.slug}`"
               target="_blank"
               rel="noopener noreferrer"
@@ -89,6 +91,9 @@ const topSourcesList = computed(() => {
             >
               {{ source.name }}
             </a>
+            <span v-else :style="{ color: source.color }">
+              {{ source.name }}
+            </span>
           </td>
           <td class="text-right">
             {{ chartCurrencyFormatter.format(source.total / 100) }}

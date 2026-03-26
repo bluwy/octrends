@@ -42,31 +42,29 @@ const rowCount = ref(10)
 const topSources = computed(() => {
   const sourcesMap: Record<
     string,
-    { key: string; color: string; name: string; slug: string; total: number }
+    { key: string; color: string; name: string; slug?: string; total: number }
   > = {}
   filteredExpenses.value.forEach((t) => {
     const oppositeAccount = t.transaction.oppositeAccount
     if (oppositeAccount == null) return
 
     const id = oppositeAccount.id
-    let name = oppositeAccount.name || 'Unknown'
-    switch (t.transaction.kind) {
-      case 'HOST_FEE':
-        name += ' (Host Fee)'
-        break
-      case 'PAYMENT_PROCESSOR_FEE':
-        name += ' (Payment Processor Fee)'
-        break
-    }
-
-    const slug = oppositeAccount.slug || ''
-    if (slug && t.collective.account.members.nodes?.some((m) => m?.account?.slug === slug)) {
-      name += ' (Maintainer)'
-    }
-
     const amount = -(t.transaction.amountInHostCurrency?.valueInCents || 0)
     const key = `${id}-${t.color}`
     if (!sourcesMap[key]) {
+      let name = oppositeAccount.name || 'Unknown'
+      switch (t.transaction.kind) {
+        case 'HOST_FEE':
+          name += ' (Host Fee)'
+          break
+        case 'PAYMENT_PROCESSOR_FEE':
+          name += ' (Payment Processor Fee)'
+          break
+      }
+      const slug = oppositeAccount.type === 'VENDOR' ? undefined : oppositeAccount.slug
+      if (slug && t.collective.account.members.nodes?.some((m) => m?.account?.slug === slug)) {
+        name += ' (Maintainer)'
+      }
       sourcesMap[key] = { key, color: t.color, name, slug, total: 0 }
     }
     sourcesMap[key].total += amount
@@ -94,6 +92,7 @@ const topSourcesList = computed(() => {
         <tr v-for="source in topSourcesList" :key="source.key">
           <td class="p-0 pr-1 pb-1">
             <a
+              v-if="source.slug"
               :href="`https://opencollective.com/${source.slug}`"
               target="_blank"
               rel="noopener noreferrer"
@@ -102,6 +101,9 @@ const topSourcesList = computed(() => {
             >
               {{ source.name }}
             </a>
+            <span v-else :style="{ color: source.color }">
+              {{ source.name }}
+            </span>
           </td>
           <td class="text-right">
             {{ chartCurrencyFormatter.format(source.total / 100) }}
