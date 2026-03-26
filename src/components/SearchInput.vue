@@ -33,6 +33,7 @@ function handleKeyUp(e: KeyboardEvent) {
       value.value = options.value[arrowSelectIndex.value]!.value
     }
     arrowSelectIndex.value = -1
+    handleSubmit()
     return
   }
 
@@ -122,7 +123,12 @@ function highlightText(text: string, query: string) {
         >
           <button
             class="bg-transparent flex justify-between m-0 border-none text-sm w-full block text-left px-2 py-1"
-            @click="value = opt.value"
+            @click="
+              () => {
+                value = opt.value
+                handleSubmit()
+              }
+            "
             type="button"
           >
             <span class="text-black" v-html="highlightText(opt.value, value)"></span>
