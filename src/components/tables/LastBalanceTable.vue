@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import type { CollectiveData } from '../../utils/types'
 import { chartCurrencyFormatter, dateOnlyFormatter, getChartLegendColor } from '../../utils/common'
+import { getBalanceInCentsForTransaction } from '../../utils/data'
 
 const props = defineProps<{
   data: CollectiveData[]
@@ -14,8 +15,8 @@ const lastBalances = computed(() => {
     for (let i = collective.transactions.length - 1; i >= 0; i--) {
       const tx = collective.transactions[i]!
       if (new Date(tx.createdAt) <= props.latestDate) {
-        const value = tx.balanceInHostCurrency?.valueInCents
-        if (value == null) continue
+        const value = getBalanceInCentsForTransaction(collective.transactions, i)
+        if (value == null) break
         balance = value
         break
       }

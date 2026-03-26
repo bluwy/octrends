@@ -40,3 +40,39 @@ async function fetchTransactions(org: string): Promise<Transaction[]> {
 
   return transactions
 }
+
+export function getBalanceInCentsForTransaction(
+  transactions: Transaction[],
+  index: number,
+): number | null {
+  const tx = transactions[index]
+  if (tx == null) return null
+
+  if (tx.balanceInHostCurrency?.valueInCents != null) {
+    return tx.balanceInHostCurrency.valueInCents
+  }
+
+  // If balance is not available, we can calculate it by finding the last available balance, and
+  // apply the credit/debit amounts
+  let balance: number | null = null
+  let balanceIndex: number | null = null
+  for (let i = index - 1; i >= 0; i--) {
+    const prevTx = transactions[i]!
+    if (prevTx.balanceInHostCurrency?.valueInCents != null) {
+      balance = prevTx.balanceInHostCurrency.valueInCents
+      balanceIndex = i
+      break
+    }
+  }
+  if (balance == null || balanceIndex == null) return null
+
+  console.log(balance, balanceIndex, index)
+
+  for (let i = balanceIndex; i <= index; i++) {
+    const tx = transactions[i]!
+    const amount = tx.amountInHostCurrency?.valueInCents
+    // Amount is already with correct sign for credit/debit
+    if (amount != null) balance += amount
+  }
+  return balance
+}

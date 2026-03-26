@@ -16,6 +16,7 @@ import {
   chartLegendColors,
   chartMonthlyDateFormatter,
 } from '../../utils/common'
+import { getBalanceInCentsForTransaction } from '../../utils/data'
 
 const props = defineProps<{
   data: CollectiveData[]
@@ -60,8 +61,10 @@ const data = computed<DataPoint[]>(() => {
       for (let txIndex = collective.transactions.length - 1; txIndex >= 0; txIndex--) {
         const tx = collective.transactions[txIndex]!
         const txDate = new Date(tx.createdAt)
-        if (txDate < firstDate && tx.balanceInHostCurrency?.valueInCents) {
-          return tx.balanceInHostCurrency.valueInCents / 100
+        if (txDate < firstDate) {
+          const balance = getBalanceInCentsForTransaction(collective.transactions, txIndex)
+          if (balance == null) break
+          return balance / 100
         }
       }
       return 0
@@ -79,6 +82,11 @@ const data = computed<DataPoint[]>(() => {
         if (date <= txDate && txDate < tmr) {
           if (tx.balanceInHostCurrency?.valueInCents) {
             lastBalance = tx.balanceInHostCurrency.valueInCents / 100
+          } else if (tx.amountInHostCurrency?.valueInCents) {
+            // If balance is not available, we can calculate it by adding the amount to the last balance.
+            // This can sometimes happen if we're fetching data too early, which sucks.
+            // This works like `getBalanceInCentsForTransaction` but more efficient here.
+            lastBalance += tx.amountInHostCurrency.valueInCents / 100
           }
           lastTxIndex = txIndex + 1
         } else if (txDate >= tmr) {
