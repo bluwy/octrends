@@ -9,8 +9,8 @@
   },
   "kv_namespaces": [
     {
-      "binding": "OPEN_COLLECTIVE_TRANSACTIONS",
-      "id": "56471e1b160749c8a396d1f2f140a7d7",
+      "binding": "OCTRENDS_TRANSACTIONS",
+      "id": "fa70f07ca9ee4d849d01269caa2f1b05",
     },
   ],
   "routes": [
@@ -23,8 +23,8 @@
     "production": {
       "kv_namespaces": [
         {
-          "binding": "OPEN_COLLECTIVE_TRANSACTIONS",
-          "id": "56471e1b160749c8a396d1f2f140a7d7",
+          "binding": "OCTRENDS_TRANSACTIONS",
+          "id": "fa70f07ca9ee4d849d01269caa2f1b05",
         },
       ],
       "assets": {

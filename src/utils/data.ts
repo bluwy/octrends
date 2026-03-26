@@ -1,4 +1,4 @@
-import type { CollectiveData } from './types'
+import type { Account, CollectiveData, Transaction } from './types'
 
 export async function fetchCollectiveData(org: string): Promise<CollectiveData> {
   const [account, transactions] = await Promise.all([
@@ -14,25 +14,29 @@ export async function fetchCollectiveData(org: string): Promise<CollectiveData> 
   return data
 }
 
-async function fetchAccount(org: string) {
+async function fetchAccount(org: string): Promise<Account> {
   const res = await fetch(`/api/account/${org}`)
   const result = await res.json()
   return result.account
 }
 
-async function fetchTransactions(org: string) {
-  let res: Response
-  let retryCount = 0
-  do {
-    res = await fetch(`/api/transactions/${org}`)
-    retryCount++
-  } while (res.status === 206 && retryCount < 20)
+async function fetchTransactions(org: string): Promise<Transaction[]> {
+  const transactions: Transaction[] = []
+  let nextUrl: string | null = `/api/transactions/${org}`
 
-  if (res.status !== 206) {
+  while (nextUrl) {
+    const res = await fetch(nextUrl)
+    if (!res.ok) {
+      throw new Error(`Failed to fetch transactions for "${org}": ${res.status} ${res.statusText}`)
+    }
+
     const data = await res.json()
-    return data.transactions
-  } else {
-    // If still 206 after retries, treat as error
-    throw new Error(`Transactions for "${org}" endpoint returned 206 too many times`)
+    transactions.push(...data.transactions)
+
+    const linkHeader = res.headers.get('Link')
+    const nextMatch = /<([^>]+)>\s*;\s*rel="next"/.exec(linkHeader ?? '')
+    nextUrl = nextMatch?.[1] ?? null
   }
+
+  return transactions
 }

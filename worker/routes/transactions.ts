@@ -8,11 +8,8 @@ import {
 
 const updateIntervalMs = 1 * 60 * 60 * 1000 // 1 hour
 const responseTtl = 30 * 60 // 30 minutes (seconds)
-const maxKvSize = 26_214_000 // 26214400 bytes (26MiB) minus some bytes for leeway.
-const maxTotalTransactions = 100_000 // Skip collectives that has excessive transactions for now (See NOTES.md)
-const maxFetchCount = 10 // To prevent the worker from running too long and timing out
-const textEncoder = new TextEncoder()
-const textDecoder = new TextDecoder()
+const pageSize = 10_000
+const queryFetchLimit = 1_000 // OC max limit is 1000
 // Bump this if the query data changes so we invalidate the cache and refetch all the transactions again
 const queryVersion = 'v1'
 // NOTE: OC's data does not seem to be complete from the API, it's missing:
@@ -26,12 +23,11 @@ const queryVersion = 'v1'
 // are legacy data that may actually be returned, but to simplify things, we only work with
 // the data we're working with for now (since 2023).
 const query = /* GraphQL */ `
-  query GetTransactions($slug: String!, $after: DateTime, $limit: Int!, $offset: Int!) {
+  query GetTransactions($slug: String!, $limit: Int!, $offset: Int!) {
     transactions(
       account: { slug: $slug }
       limit: $limit
       offset: $offset
-      dateFrom: $after
       orderBy: { field: CREATED_AT, direction: ASC }
       includeHost: true
       includeRegularTransactions: true
@@ -97,8 +93,10 @@ interface CacheMetadata {
   version: string
   /** ISO string */
   lastUpdated: string
-  /** Number of chunks the value is split into */
-  chunkCount: number
+  /** Pagination */
+  hasNextPage: boolean
+  /** Current count of transactions */
+  pageTransactionsCount: number
 }
 
 export const handler: RouteHandler = async (request, env, ctx) => {
@@ -108,126 +106,135 @@ export const handler: RouteHandler = async (request, env, ctx) => {
   if (!match) return
 
   const slug = match[1]
+  const page = parseInt(url.searchParams.get('page') || '0', 10)
+  if (Number.isNaN(page) || page < 0) {
+    return new Response('Invalid "page" query parameter', { status: 400 })
+  }
+  const cacheKey = `${slug}?page=${page}`
+  const KV = env.OCTRENDS_TRANSACTIONS
 
-  const cached = await kvGetWithChunks(env.OPEN_COLLECTIVE_TRANSACTIONS, slug, env)
-  let transactionsStr: string | undefined
-  if (cached.value && cached.metadata?.version === queryVersion && cached.metadata?.lastUpdated) {
+  let cached: KVNamespaceGetWithMetadataResult<ReadableStream<any>, CacheMetadata> | null =
+    await KV.getWithMetadata<CacheMetadata>(cacheKey, { type: 'stream' })
+  if (cached?.value && cached.metadata?.version !== queryVersion) {
+    if (env.DEV)
+      console.log(
+        `Cache version mismatch for "${slug}" (i: ${page}), expected "${queryVersion}", got "${cached.metadata?.version}". Skipping cache...`,
+      )
+    cached = null
+  }
+  if (cached?.value && cached.metadata) {
     const lastUpdated = cached.metadata.lastUpdated
+    const hasNextPage = cached.metadata.hasNextPage
     const age = Date.now() - new Date(lastUpdated).getTime()
-    const chunkCount = cached.metadata.chunkCount
 
-    if (age < updateIntervalMs) {
-      if (env.DEV) console.log(`Using cache for "${slug}", age: ${age}ms, chunks: ${chunkCount}`)
+    // If there's a next page, it means this page is already full and there's no reason to update this page
+    if (hasNextPage || age < updateIntervalMs) {
+      if (env.DEV) console.log(`Using cache for "${slug}" (i: ${page}, age: ${age}ms)`)
 
       return new Response(cached.value, {
         headers: {
           'Content-Type': 'application/json',
-          ...(env.DEV
-            ? {}
-            : {
-                'Cache-Control': `public, max-age=${responseTtl}`,
-              }),
+          ...getLinkHeaders(url, page, hasNextPage),
+          ...getCacheHeaders(env),
         },
       })
     }
 
-    if (env.DEV) console.log(`Cache for "${slug}" is outdated, refetching...`)
-    transactionsStr = cached.value
+    if (env.DEV) console.log(`Cache for "${slug}" (i: ${page}) is outdated, refetching...`)
   }
 
   const currentDate = new Date()
-  const lastCreatedAt = transactionsStr ? getLastCreatedAt(transactionsStr) : undefined
-  const fetchedTransactions = await fetchTransactions(slug, lastCreatedAt, env)
-
+  const pageTransactionsCount = cached?.metadata?.pageTransactionsCount || 0
+  const fetchedTransactions = await fetchTransactionsPage(slug, page, pageTransactionsCount, env)
   if (fetchedTransactions instanceof Response) {
     return fetchedTransactions
   }
 
-  const { transactions: newTransactions, exceededMaxFetchCount } = fetchedTransactions
-  const result = transactionsStr
-    ? appendTransactions(transactionsStr, newTransactions)
-    : JSON.stringify({ transactions: newTransactions })
-
+  const { transactions, hasNextPage } = fetchedTransactions
+  const newTransactionsCount = transactions.length + pageTransactionsCount
   if (env.DEV)
     console.log(
-      `Returned ${newTransactions.length} new transactions for "${slug}". Total is now ${JSON.parse(result).transactions.length} transactions.`,
+      `Returned ${transactions.length} transactions for "${slug}" (page: ${page}, chunkCount: ${newTransactionsCount}).`,
     )
 
-  if (exceededMaxFetchCount) {
-    await kvPutWithChunks(
-      env.OPEN_COLLECTIVE_TRANSACTIONS,
-      slug,
-      result,
-      {
-        version: queryVersion,
-        // Set 0 date so it triggers an update on the next request
-        lastUpdated: new Date(0).toISOString(),
-      },
-      env,
+  // If no new transactions, just update the metadata to refresh the cache expiration
+  if (cached?.value && cached.metadata && transactions.length === 0) {
+    // NOTE: This isn't ideal as KV will read eagerly, and Response will be pull-based depending on
+    // the consumer bandwidth, but the alternative is to put this metadata as a separate key-value
+    // and that'll make things more complex for now.
+    const tee = cached.value.tee()
+
+    ctx.waitUntil(
+      KV.put(cacheKey, tee[0], {
+        metadata: {
+          version: queryVersion,
+          lastUpdated: currentDate.toISOString(),
+          hasNextPage: cached.metadata.hasNextPage,
+          pageTransactionsCount: cached.metadata.pageTransactionsCount,
+        } as CacheMetadata,
+      }),
     )
-    // Client should re-request to trigger subsequent fetches until all transactions are fetched
-    return new Response('Data incomplete, please re-request to fetch remaining transactions', {
-      status: 206,
+
+    return new Response(tee[1], {
+      headers: {
+        'Content-Type': 'application/json',
+        ...getLinkHeaders(url, page, cached.metadata.hasNextPage),
+        ...getCacheHeaders(env),
+      },
     })
   }
 
+  // If there are new transactions, append them to the existing cache value or create a new one
+  const newTransactionsStr = cached?.value
+    ? await appendTransactionsToCache(cached.value, transactions)
+    : JSON.stringify({ transactions })
+
   ctx.waitUntil(
-    kvPutWithChunks(
-      env.OPEN_COLLECTIVE_TRANSACTIONS,
-      slug,
-      result,
-      {
+    KV.put(cacheKey, newTransactionsStr, {
+      metadata: {
         version: queryVersion,
         lastUpdated: currentDate.toISOString(),
-      },
-      env,
-    ),
+        hasNextPage,
+        pageTransactionsCount: newTransactionsCount,
+      } as CacheMetadata,
+    }),
   )
 
-  return new Response(result, {
+  return new Response(newTransactionsStr, {
     headers: {
       'Content-Type': 'application/json',
-      ...(env.DEV
-        ? {}
-        : {
-            'Cache-Control': `public, max-age=${responseTtl}`,
-          }),
+      ...getLinkHeaders(url, page, hasNextPage),
+      ...getCacheHeaders(env),
     },
   })
 }
 
-async function fetchTransactions(
+async function fetchTransactionsPage(
   slug: string,
-  after: string | undefined,
+  page: number,
+  pageTransactionsCount: number,
   env: Env,
-): Promise<Response | { transactions: Transaction[]; exceededMaxFetchCount: boolean }> {
+): Promise<Response | { transactions: Transaction[]; hasNextPage: boolean }> {
   const transactions: Transaction[] = []
-  const limit = 1000 // OC max limit is 1000
-  let offset = 0
-  let fetchCount = 0
-
-  // Increment after by 1ms because OC's API is inclusive for some reason
-  after = after ? new Date(new Date(after).getTime() + 1).toISOString() : undefined
+  const pageStartOffset = page * pageSize
+  const availableCountLeft = pageSize - pageTransactionsCount
+  let offset = pageStartOffset + pageTransactionsCount
+  let hasNextPage = false
 
   while (true) {
-    fetchCount++
-    if (fetchCount > maxFetchCount) break
+    const limit = Math.min(queryFetchLimit, availableCountLeft - transactions.length)
+    if (limit <= 0) break
 
     const response = await fetch(openCollectiveGraphQLEndpoint, {
       method: 'POST',
       headers: {
+        'Content-Type': 'application/json',
         ...getOpenCollectiveTokenHeader(env),
         ...userAgentHeader,
-        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         query,
-        variables: {
-          slug,
-          after,
-          limit,
-          offset,
-        } satisfies GetTransactionsQueryVariables,
+        variables: { slug, limit, offset } satisfies GetTransactionsQueryVariables,
       }),
     })
 
@@ -242,51 +249,51 @@ async function fetchTransactions(
       )
     }
 
-    const nodes = result.data.transactions.nodes
-    if (nodes == null) break
     const totalCount = result.data.transactions.totalCount
     if (totalCount == null) break
 
-    if (totalCount > maxTotalTransactions) {
-      return new Response(`Collective "${slug}" has too many transactions`, { status: 400 })
+    // Out of range: there is no page starting at this offset.
+    if (page > 0 && pageStartOffset >= totalCount) {
+      return new Response('"page" query parameter is out of range', { status: 400 })
     }
+
+    const nodes = result.data.transactions.nodes
+    if (nodes == null) break
+    hasNextPage = offset + nodes.length < totalCount
 
     if (env.DEV)
       console.log(
         `Fetched ${nodes.length} transactions for "${slug}" (offset: ${offset}, total: ${totalCount})`,
       )
 
-    // Add data
     for (const node of nodes) {
       if (node == null) continue // this shouldn't happen in practice
       transactions.push(node)
     }
 
-    // Iterate the next page
     offset += nodes.length
-    if (offset >= totalCount) break
+
+    // If for some reaosn nodes.length is 0, break out
+    if (nodes.length === 0) break
   }
 
-  return { transactions, exceededMaxFetchCount: fetchCount >= maxFetchCount }
+  return { transactions, hasNextPage }
 }
 
-function getLastCreatedAt(transactionsStr: string): string | undefined {
-  const lastIndex = transactionsStr.lastIndexOf('"createdAt":"')
-  if (lastIndex === -1) return undefined
-  const startIndex = lastIndex + '"createdAt":"'.length
-  const endIndex = transactionsStr.indexOf('"', startIndex)
-  if (endIndex === -1) return undefined
-  return transactionsStr.slice(startIndex, endIndex)
-}
+async function appendTransactionsToCache(
+  cacheValue: ReadableStream<any>,
+  newTransactions: Transaction[],
+): Promise<string> {
+  // Convert to string, then append at the very last `]}` closing (Do not JSON.parse for perf)
+  const cacheValueStr = await new Response(cacheValue).text()
+  const newTransactionsStr = JSON.stringify(newTransactions)
 
-function appendTransactions(transactionsStr: string, newTransactions: Transaction[]): string {
-  if (newTransactions.length === 0) {
-    return transactionsStr
-  }
-  const before = transactionsStr.slice(0, -2) // `]}`
-  const newTransactionsStr = JSON.stringify(newTransactions).slice(1, -1) // remove the surrounding []
-  const delim = before[before.length - 1] === '[' ? '' : ','
-  return `${before}${delim}${newTransactionsStr}]}`
+  return (
+    cacheValueStr.slice(0, -2) + // remove the last `]}`
+    (cacheValueStr.at(-3) === '[' ? '' : ',') + // add comma if there are existing transactions
+    newTransactionsStr.slice(1, -1) + // remove the surrounding `[]`
+    ']}'
+  )
 }
 
 function isAccountNotFound(errors: any): boolean {
@@ -296,70 +303,19 @@ function isAccountNotFound(errors: any): boolean {
   return false
 }
 
-async function kvGetWithChunks(
-  kv: KVNamespace,
-  key: string,
-  env: Env,
-): Promise<KVNamespaceGetWithMetadataResult<string, CacheMetadata>> {
-  const cached = await kv.getWithMetadata<CacheMetadata>(key)
-  if (!cached.value) return cached
+function getLinkHeaders(url: URL, pageIndex: number, hasNextPage: boolean): Record<string, string> {
+  const headers: Record<string, string> = {}
 
-  const chunkCount = cached.metadata?.chunkCount || 1
-  if (chunkCount === 1)
-    return { value: cached.value, metadata: cached.metadata, cacheStatus: cached.cacheStatus }
-
-  if (env.DEV)
-    console.log(
-      `Value for key "${key}" is ${cached.value.length} bytes, stored in ${chunkCount} chunks.`,
-    )
-
-  let allStrs = cached.value
-  for (let i = 1; i < chunkCount; i++) {
-    const chunkKey = `${key}-chunk-${i}`
-    const chunk = await kv.get(chunkKey)
-    if (chunk) allStrs += chunk
-    else
-      console.warn(
-        `Missing chunk ${i} for key "${key}" in KV, expected ${chunkCount} chunks but got less.`,
-      )
+  if (hasNextPage) {
+    const nextUrl = new URL(url.toString())
+    nextUrl.search = ''
+    nextUrl.searchParams.set('page', String(pageIndex + 1))
+    headers.Link = `<${nextUrl.pathname}${nextUrl.search}>; rel="next"`
   }
-  return { value: allStrs, metadata: cached.metadata, cacheStatus: cached.cacheStatus }
+
+  return headers
 }
 
-async function kvPutWithChunks(
-  kv: KVNamespace,
-  key: string,
-  value: string,
-  metadata: Record<string, any>,
-  env: Env,
-) {
-  const chunks = splitStringByBytes(value, maxKvSize)
-  const chunkCount = chunks.length
-  if (chunkCount === 1) {
-    await kv.put(key, value, { metadata: { ...metadata, chunkCount } })
-    return
-  }
-
-  if (env.DEV)
-    console.log(
-      `Value for key "${key}" is ${value.length} bytes, splitting into ${chunkCount} chunks for KV storage.`,
-    )
-
-  const promises = []
-  promises.push(kv.put(key, chunks[0], { metadata: { ...metadata, chunkCount } }))
-  for (let i = 1; i < chunkCount; i++) {
-    const chunkKey = `${key}-chunk-${i}`
-    promises.push(kv.put(chunkKey, chunks[i]))
-  }
-  await Promise.all(promises)
-}
-
-function splitStringByBytes(str: string, maxBytes: number): string[] {
-  const bytes = textEncoder.encode(str)
-  const chunks: string[] = []
-  for (let i = 0; i < bytes.length; i += maxBytes) {
-    const chunkBytes = bytes.subarray(i, i + maxBytes)
-    chunks.push(textDecoder.decode(chunkBytes))
-  }
-  return chunks
+function getCacheHeaders(env: Env): Record<string, string> {
+  return env.DEV ? {} : { 'Cache-Control': `public, max-age=${responseTtl}` }
 }
