@@ -46,6 +46,7 @@ KEYS=$(pnpm wrangler kv key list --namespace-id="$NAMESPACE_ID" --local)
 
 # Parse key names from JSON output
 KEY_NAMES=$(echo "$KEYS" | jq -r '.[].name')
+KEY_ENTRIES=$(echo "$KEYS" | jq -c '.[]')
 
 # Count keys
 KEY_COUNT=$(echo "$KEY_NAMES" | grep -c . || echo "0")
@@ -73,14 +74,28 @@ echo ""
 SUCCESS_COUNT=0
 FAIL_COUNT=0
 
-while IFS= read -r key; do
-  if [[ -n "$key" ]]; then
+while IFS= read -r key_entry; do
+  if [[ -n "$key_entry" ]]; then
+    key=$(echo "$key_entry" | jq -r '.name')
+    metadata=$(echo "$key_entry" | jq -c '.metadata // empty')
+    expiration=$(echo "$key_entry" | jq -r '.expiration // empty')
+
     echo "Copying key: $key"
     
     # Read local value into a temp file to avoid shell argument size limits.
     if pnpm wrangler kv key get "$key" --namespace-id="$NAMESPACE_ID" --local > "$TEMP_FILE"; then
-      # Put value to remote KV using file path.
-      if pnpm wrangler kv key put "$key" --path "$TEMP_FILE" --namespace-id="$NAMESPACE_ID" --remote; then
+      # Put value to remote KV using file path and preserve optional attributes.
+      PUT_ARGS=(pnpm wrangler kv key put "$key" --path "$TEMP_FILE" --namespace-id="$NAMESPACE_ID" --remote)
+
+      if [[ -n "$metadata" ]]; then
+        PUT_ARGS+=(--metadata "$metadata")
+      fi
+
+      if [[ -n "$expiration" ]]; then
+        PUT_ARGS+=(--expiration "$expiration")
+      fi
+
+      if "${PUT_ARGS[@]}"; then
         ((SUCCESS_COUNT++))
         echo "✓ Successfully copied: $key"
       else
@@ -93,7 +108,7 @@ while IFS= read -r key; do
     fi
     echo ""
   fi
-done <<< "$KEY_NAMES"
+done <<< "$KEY_ENTRIES"
 
 rm -f "$TEMP_FILE"
 
