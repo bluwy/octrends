@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { debounce } from '../utils/common'
+import { suggestedCollectives as allCollectives } from '../utils/constants'
 
 const value = defineModel<string>({ default: '' })
 const emit = defineEmits(['update:value', 'submit'])
 
-const options = ref<{ value: string; description?: string; version: string }[]>([])
+const options = ref<{ value: string }[]>([])
 const arrowSelectIndex = ref(-1)
-const shouldAbortSearch = ref(false)
 
 const hintText = computed(() => {
   return arrowSelectIndex.value < 0 &&
@@ -65,24 +65,17 @@ const search = debounce(async () => {
 
   if (!value.value) return
 
-  // const searchTerm = value.value
-  // TODO: implement this
-  // const result = await fetch(`/api/search?q=${encodeURIComponent(searchTerm)}&size=10`)
-
-  // if (result.ok && searchTerm === npmPkgName.value && !shouldAbortSearch.value) {
-  //   const json = await result.json()
-  //   options.value = json.objects.map((v) => ({
-  //     value: v.package.name,
-  //     description: v.package.description,
-  //     version: v.package.version,
-  //   }))
-  // }
-}, 500)
+  // Poor man's search because I don't know how to efficiently search for collectives
+  const searchTerm = value.value
+  const matched = allCollectives.filter((c) => c.toLowerCase().includes(searchTerm.toLowerCase()))
+  options.value = matched.slice(0, 10).map((name) => ({
+    value: name,
+  }))
+}, 150)
 
 function handleInput() {
   arrowSelectIndex.value = -1
   options.value = []
-  shouldAbortSearch.value = false
   search()
 }
 
@@ -107,7 +100,7 @@ function highlightText(text: string, query: string) {
       <!-- Hint for "Tab" -->
       <input
         type="text"
-        class="w-full px-3 py-1 m-0 text-sm bg-transparent text-red pointer-events-none truncate border-none"
+        class="w-full px-2 py-1 m-0 text-sm bg-transparent text-red pointer-events-none truncate border-none"
         aria-label="Search collective"
         :placeholder="hintText || ' '"
         readonly
@@ -128,12 +121,11 @@ function highlightText(text: string, query: string) {
           :aria-selected="arrowSelectIndex === i"
         >
           <button
-            class="bg-transparent flex justify-between m-0 border-none text-sm w-full block text-left px-3 py-1"
+            class="bg-transparent flex justify-between m-0 border-none text-sm w-full block text-left px-2 py-1"
             @click="value = opt.value"
             type="button"
           >
             <span class="text-black" v-html="highlightText(opt.value, value)"></span>
-            <span class="text-black opacity-50">{{ opt.version }}</span>
           </button>
         </li>
       </ul>
