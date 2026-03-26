@@ -8,6 +8,7 @@ import {
 
 const updateIntervalMs = 1 * 60 * 60 * 1000 // 1 hour
 const responseTtl = 30 * 60 // 30 minutes (seconds)
+const maxTotalTransactions = 80_000 // Skip collectives that has excessive transactions for now (See NOTES.md)
 const pageSize = 10_000
 const queryFetchLimit = 1_000 // OC max limit is 1000
 // Bump this if the query data changes so we invalidate the cache and refetch all the transactions again
@@ -251,6 +252,14 @@ async function fetchTransactionsPage(
 
     const totalCount = result.data.transactions.totalCount
     if (totalCount == null) break
+
+    if (totalCount > maxTotalTransactions) {
+      return new Response(`Collective "${slug}" has too many transactions (${totalCount})`, {
+        status: 400,
+        // Cache 400 to avoid repeatedly fetching collectives with excessive transactions
+        headers: getCacheHeaders(env),
+      })
+    }
 
     // Out of range: there is no page starting at this offset.
     if (page > 0 && pageStartOffset >= totalCount) {
