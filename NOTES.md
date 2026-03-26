@@ -64,3 +64,9 @@ rpfreestore: 12012
 communitykitchenmpls: 11861
 crystal-lang: 11694
 ```
+
+## Copy local KV data to production
+
+```bash
+bash ./scripts/copy-kv.sh fa70f07ca9ee4d849d01269caa2f1b05
+```

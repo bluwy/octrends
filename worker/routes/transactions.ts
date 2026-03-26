@@ -284,6 +284,8 @@ async function fetchTransactionsPage(
 
     // If for some reaosn nodes.length is 0, break out
     if (nodes.length === 0) break
+    // If this is the end of the total, break out
+    if (offset >= totalCount) break
   }
 
   return { transactions, hasNextPage }
