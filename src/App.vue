@@ -179,6 +179,17 @@ function removeOrg(org: string) {
         :earliestDate="selectedEarliestDate"
         :latestDate="selectedLatestDate"
       />
+      <div class="text-xs opacity-60">
+        <p class="my-2">Notes:</p>
+        <ol class="my-2 pl-5">
+          <li>"Maintainer" is defined as someone who is a member of the collective team.</li>
+          <li>
+            The display name of some users may be outdated as they're stored at the time of fetching
+            the activity.
+          </li>
+          <li>The data only supports USD.</li>
+        </ol>
+      </div>
     </section>
   </div>
 </template>

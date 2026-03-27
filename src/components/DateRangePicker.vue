@@ -72,8 +72,8 @@ function formatDate(date: Date | Date[]) {
         v-model="range"
         range
         dark
-        auto-apply
         :time-config="{ enableTimePicker: false }"
+        :config="{ setDateOnMenuClose: true }"
         :formats="{
           input: formatDate,
           preview: formatDate,

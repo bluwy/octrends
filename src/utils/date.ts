@@ -1,6 +1,6 @@
 import type { CollectiveData } from './types'
 
-export const endOfToday = endOfDay(new Date())
+export const endOfToday = endOfDayLocal(new Date())
 
 export function startOfDay(d: Date) {
   const result = new Date(d)
@@ -11,6 +11,12 @@ export function startOfDay(d: Date) {
 export function endOfDay(d: Date) {
   const result = new Date(d)
   result.setUTCHours(23, 59, 59, 999)
+  return result
+}
+
+function endOfDayLocal(d: Date) {
+  const result = new Date(d)
+  result.setHours(23, 59, 59, 999)
   return result
 }
 

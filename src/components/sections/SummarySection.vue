@@ -128,7 +128,7 @@ const summaries = computed(() => {
               formatPercentage(s.expenseToUsers.percentage)
             }})</strong
           >
-          to other users
+          to other users / contributors
         </li>
         <li>
           <strong class="text-red-200"

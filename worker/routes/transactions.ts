@@ -155,7 +155,7 @@ export const handler: RouteHandler = async (request, env, ctx) => {
   const newTransactionsCount = transactions.length + pageTransactionsCount
   if (env.DEV)
     console.log(
-      `Returned ${transactions.length} transactions for "${slug}" (page: ${page}, chunkCount: ${newTransactionsCount}).`,
+      `Returned ${transactions.length} transactions for "${slug}" (page: ${page}, new count: ${newTransactionsCount}).`,
     )
 
   // If no new transactions, just update the metadata to refresh the cache expiration
