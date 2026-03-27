@@ -137,7 +137,7 @@ function removeOrg(org: string) {
           @close="() => removeOrg(d.name)"
         />
       </div>
-      <hr v-if="data.length > 0" class="fade-lines border-white my-8" />
+      <hr v-if="data.length > 0" class="border-white my-8" />
       <p v-else-if="!hasPathnameInitially" class="my-6">
         Add a collective to get started. For example,
         <template v-for="(c, i) in randomSuggestedCollectives" :key="c">
@@ -155,7 +155,7 @@ function removeOrg(org: string) {
       v-if="data.length > 0 && earliestDate && selectedEarliestDate && selectedLatestDate"
       class="w-full max-w-6xl px-4 mx-auto"
     >
-      <div class="flex items-center justify-between mb-4 gap-2">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-2">
         <h2 class="text-xl font-500 m-0" v-html="vsColoredHtml"></h2>
         <DateRangePicker v-model="dateRange" :minDate="earliestDate" />
       </div>
@@ -182,32 +182,3 @@ function removeOrg(org: string) {
     </section>
   </div>
 </template>
-
-<style scoped>
-hr.fade-lines {
-  position: relative;
-  overflow: visible;
-  border: none;
-  height: 2px;
-  background: #cacaca;
-}
-
-hr.fade-lines::before,
-hr.fade-lines::after {
-  content: '';
-  position: absolute;
-  top: 0px;
-  height: 2px;
-  width: 4rem;
-}
-
-hr.fade-lines::before {
-  right: 100%;
-  background: linear-gradient(to right, transparent, #cacaca 90%);
-}
-
-hr.fade-lines::after {
-  left: 100%;
-  background: linear-gradient(to left, transparent, #cacaca 90%);
-}
-</style>
