@@ -27,6 +27,7 @@ const filteredIncome = computed(() => {
     for (const transaction of collective.transactions) {
       if (
         transaction.type === 'CREDIT' &&
+        !transaction.isRefund &&
         new Date(transaction.createdAt) >= props.earliestDate &&
         new Date(transaction.createdAt) <= props.latestDate
       ) {
@@ -56,6 +57,9 @@ const topSources = computed(() => {
       // VENDOR no slug: 11004-sovereign-tech-fund-2532c0cc
       const slug = oppositeAccount.type === 'VENDOR' ? undefined : oppositeAccount.slug
       sourcesMap[key] = { key, color: t.color, name, slug, total: 0 }
+    }
+    if (oppositeAccount.slug === 'sapphi-red') {
+      console.log(t.transaction)
     }
     sourcesMap[key].total += amount
   })

@@ -15,6 +15,7 @@ const collectiveExpenses = computed(() => {
     for (const transaction of collective.transactions) {
       if (
         transaction.type === 'DEBIT' &&
+        !transaction.isRefund &&
         new Date(transaction.createdAt) >= props.earliestDate &&
         new Date(transaction.createdAt) <= props.latestDate
       ) {

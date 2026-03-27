@@ -32,12 +32,12 @@ const summaries = computed(() => {
       return date >= props.earliestDate && date <= props.latestDate
     })
 
-    const incomes = txs.filter((tx) => tx.type === 'CREDIT')
+    const incomes = txs.filter((tx) => tx.type === 'CREDIT' && !tx.isRefund)
     const totalIncome = incomes.reduce(
       (sum, tx) => sum + (tx.amountInHostCurrency?.valueInCents || 0),
       0,
     )
-    const expenses = txs.filter((tx) => tx.type === 'DEBIT')
+    const expenses = txs.filter((tx) => tx.type === 'DEBIT' && !tx.isRefund)
     const totalExpense = expenses.reduce(
       (sum, tx) => sum + -(tx.amountInHostCurrency?.valueInCents || 0),
       0,
