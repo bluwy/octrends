@@ -115,7 +115,7 @@ export const handler: RouteHandler = async (request, env, ctx) => {
   const KV = env.OCTRENDS_TRANSACTIONS
 
   let cached: KVNamespaceGetWithMetadataResult<ReadableStream<any>, CacheMetadata> | null =
-    await KV.getWithMetadata<CacheMetadata>(cacheKey, { type: 'stream' })
+    await KV.getWithMetadata<CacheMetadata>(cacheKey, { type: 'stream', cacheTtl: responseTtl })
   if (cached?.value && cached.metadata?.version !== queryVersion) {
     if (env.DEV)
       console.log(
